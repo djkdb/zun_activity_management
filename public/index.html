@@ -1274,6 +1274,8 @@ function renderGaps() {
 
 // ── 빠른 입력 ───────────────────────────────────────────────────
 let capParsed = [];
+let capNotes = [];
+const actOf = (slug) => S.activities.find((a) => a.slug === slug) ?? null;
 
 /** 고정 일정과 겹치는지 — 대시보드가 이미 들고 있는 S.fixed 를 쓴다. */
 function conflictOf(dueISO, allDay) {
@@ -1301,14 +1303,20 @@ function renderCapture() {
         ${it._on ? 'checked' : ''} aria-label="${esc(it.title)} 저장"></label>
       <span>
         <span class="t">${esc(it.title)}</span>
-        <span class="s"><span>${esc(it.kind)}</span>
+        <span class="s">
+          ${it.activity_slug ? `<span class="tag" style="--c:${colorOf(actOf(it.activity_slug))}"><i class="dot"></i>${esc(actOf(it.activity_slug)?.name ?? it.activity_slug)}</span>` : ''}
+          <span>${esc(it.kind)}</span>
           ${why ? `<span class="warn">⚠ ${esc(why)}</span>` : ''}</span>
       </span>
-      <span class="w">${esc(md(ymd(it.due_at)))} ${it.all_day ? '종일' : esc(hm(it.due_at))}</span>
+      <span class="w">${esc(md(ymd(it.due_at)))} ${it.all_day ? '종일' : esc(hm(it.due_at))}${
+        it.due_end && ymd(it.due_end) !== ymd(it.due_at) ? ` ~ ${esc(md(ymd(it.due_end)))}`
+        : it.due_end && !it.all_day ? `~${esc(hm(it.due_end))}` : ''}</span>
     </li>`;
   }).join('');
   const on = capParsed.filter((i) => i._on).length;
+  const notes = (capNotes ?? []).filter((n) => !/^규칙 기반으로/.test(n));
   box.innerHTML = `<ul class="cap-list">${rows}</ul>
+    ${notes.length ? `<p class="cap-hint">${notes.map(esc).join('<br>')}</p>` : ''}
     <div class="cap-actions">
       <button class="btn" type="button" id="cap-save" ${on ? '' : 'disabled'}>${on}건 저장</button>
       <button class="btn btn--quiet" type="button" id="cap-cancel">취소</button>
@@ -1327,9 +1335,11 @@ function readCapture() {
   const box = document.getElementById('cap-out');
   if (!text) { box.innerHTML = '<p class="cap-hint">읽을 내용이 없습니다.</p>'; return; }
 
+  // 활동을 안 고르면 원문에서 활동명을 알아본다 ('네이버 미션 …' → naver)
   const slug = document.getElementById('cap-act').value || null;
-  const r = fallbackParse(text, { activitySlug: slug });
+  const r = fallbackParse(text, { activitySlug: slug, activities: S.activities });
 
+  capNotes = r.notes ?? [];
   capParsed = r.items.map((it) => ({
     ...it, _on: true, conflict_why: it.conflict_why ?? conflictOf(it.due_at, it.all_day),
   }));
