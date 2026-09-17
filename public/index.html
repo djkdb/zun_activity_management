@@ -330,6 +330,37 @@ code,.mono{font-family:var(--mono)}
 .due-w{font-size:13px;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums;padding-top:3px}
 .none{padding:var(--gap-lg) var(--gap);text-align:center;font-size:15px;color:var(--ink-2)}
 
+/* ═══ 일정 수정 ═══════════════════════════════════════════════════ */
+.due-w{display:inline-flex;align-items:center;gap:8px}
+.edit{
+  position:relative;
+  border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink-2);
+  border-radius:999px;min-height:32px;padding:0 12px;font-size:12px;cursor:pointer;
+  transition:background-color .18s ease,color .18s ease,border-color .18s ease;
+}
+/* 보이는 알약은 32px 로 두되 누르는 영역은 44px 을 채운다 */
+.edit::after{content:'';position:absolute;inset:-6px -4px}
+.edit:hover{background:var(--panel-3);color:var(--ink);border-color:var(--line-2)}
+.due-row.editing{background:var(--accent-soft)}
+.due-row.editing .edit{background:var(--accent-btn);color:var(--on-accent);border-color:transparent}
+
+.due-edit{border-top:1px solid var(--line);background:var(--panel-2)}
+.ed{display:flex;flex-wrap:wrap;gap:12px;padding:var(--gap);align-items:end}
+.ed .f{flex:1 1 150px;min-width:0}
+.ed-toggles{display:flex;gap:16px;align-items:center;flex:1 1 auto;min-height:44px}
+.tog{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;color:var(--ink-2);cursor:pointer}
+.tog input{width:20px;height:20px;accent-color:var(--accent-btn);cursor:pointer}
+.ed-bar{display:flex;gap:8px;flex:1 1 100%}
+.ed-bar .btn{flex:0 0 auto}
+.btn--danger{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}
+.btn--danger:hover{background:var(--bad);color:var(--bg);filter:none}
+.btn--danger[data-armed="1"]{background:var(--bad);color:var(--bg)}
+@media (max-width:640px){
+  .ed .f{flex:1 1 100%}
+  .ed-bar{flex-wrap:wrap}
+  .ed-bar .btn{flex:1 1 auto}
+}
+
 /* ═══ 활동 카드 ═══════════════════════════════════════════════════ */
 .acts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--gap)}
 .act{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:var(--gap);min-width:0}
@@ -1069,7 +1100,9 @@ function rowHtml(it) {
         ${it.conflict ? `<span class="tag warn">${esc(it.conflict_why ?? '일정 충돌')}</span>` : ''}
       </span>
     </span>
-    <span class="due-w">${it.all_day ? '종일' : esc(hm(it.due_at))}</span>
+    <span class="due-w">${it.all_day ? '종일' : esc(hm(it.due_at))}
+      <button class="edit" type="button" data-id="${it.id}" aria-label="${esc(it.title)} 수정">수정</button>
+    </span>
   </li>`;
 }
 
@@ -1096,6 +1129,118 @@ function renderDue() {
   ul.innerHTML = out.join('');
 
   ul.querySelectorAll('.cbx').forEach((c) => c.addEventListener('change', () => toggleDone(c.dataset.id, c.checked)));
+  ul.querySelectorAll('.edit').forEach((b) => b.addEventListener('click', () => openEditor(b.dataset.id)));
+}
+
+/** 한 건을 그 자리에서 고친다. 목록 전체를 다시 그리지 않는다. */
+function openEditor(id) {
+  document.querySelectorAll('.due-edit').forEach((e) => e.remove());
+  document.querySelectorAll('.due-row.editing').forEach((r) => r.classList.remove('editing'));
+
+  const it = S.items.find((x) => x.id === id);
+  const row = document.querySelector(`.due-row[data-id="${id}"]`);
+  if (!it || !row) return;
+  row.classList.add('editing');
+
+  const d = ymd(it.due_at);
+  const t = it.all_day ? '' : hm(it.due_at);
+  const li = document.createElement('li');
+  li.className = 'due-edit';
+  li.innerHTML = `
+    <div class="ed">
+      <div class="f" style="flex:1 1 100%"><label for="ed-t">제목</label>
+        <input id="ed-t" value="${esc(it.title)}" maxlength="200"></div>
+      <div class="f"><label for="ed-d">날짜</label><input id="ed-d" type="date" value="${d}"></div>
+      <div class="f"><label for="ed-h">시각</label><input id="ed-h" type="time" value="${t}"
+        ${it.all_day ? 'disabled' : ''}></div>
+      <div class="f"><label for="ed-k">종류</label><select id="ed-k">${
+        ['마감','회의','제출','업로드','안내','행사','할일','마일스톤']
+          .map((k) => `<option${k === it.kind ? ' selected' : ''}>${k}</option>`).join('')}</select></div>
+      <div class="f"><label for="ed-a">활동</label><select id="ed-a">
+        <option value="">활동 없음</option>${
+        S.activities.map((a) => `<option value="${a.id}"${a.id === it.activity_id ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}
+      </select></div>
+      <div class="ed-toggles">
+        <label class="tog"><input id="ed-all" type="checkbox" ${it.all_day ? 'checked' : ''}> 종일</label>
+        <label class="tog"><input id="ed-req" type="checkbox" ${it.required ? 'checked' : ''}> 필수</label>
+      </div>
+      <div class="ed-bar">
+        <button class="btn" type="button" id="ed-save">저장</button>
+        <button class="btn btn--quiet" type="button" id="ed-cancel">취소</button>
+        <button class="btn btn--danger" type="button" id="ed-del">삭제</button>
+      </div>
+    </div>`;
+  row.after(li);
+
+  const $ = (x) => li.querySelector(x);
+  $('#ed-all').addEventListener('change', (e) => { $('#ed-h').disabled = e.target.checked; });
+  $('#ed-cancel').addEventListener('click', closeEditor);
+  $('#ed-save').addEventListener('click', () => saveEdit(id, li));
+  $('#ed-del').addEventListener('click', (e) => confirmDelete(id, e.target));
+  $('#ed-t').focus();
+  li.scrollIntoView({ block: 'nearest' });
+}
+
+function closeEditor() {
+  document.querySelectorAll('.due-edit').forEach((e) => e.remove());
+  document.querySelectorAll('.due-row.editing').forEach((r) => r.classList.remove('editing'));
+}
+
+async function saveEdit(id, li) {
+  const it = S.items.find((x) => x.id === id);
+  const $ = (x) => li.querySelector(x);
+  const title = $('#ed-t').value.trim();
+  const date = $('#ed-d').value;
+  if (!title) { toast('제목이 비었습니다', true); return; }
+  if (!date) { toast('날짜가 비었습니다', true); return; }
+
+  const allDay = $('#ed-all').checked;
+  const time = allDay ? '00:00' : ($('#ed-h').value || '23:59');
+  const due = `${date}T${time}:00+09:00`;
+  const why = conflictOf(due, allDay);
+
+  const patch = {
+    title, kind: $('#ed-k').value,
+    activity_id: $('#ed-a').value || null,
+    due_at: due, all_day: allDay, required: $('#ed-req').checked,
+    conflict: Boolean(why), conflict_why: why,
+  };
+
+  const btn = $('#ed-save'); btn.disabled = true; btn.textContent = '저장 중';
+  const { error } = await sb.from('sp_item').update(patch).eq('id', id);
+  if (error) { btn.disabled = false; btn.textContent = '저장'; toast(`저장 실패: ${error.message}`, true); return; }
+
+  Object.assign(it, patch);
+  S.items.sort((a, b) => ((a.due_at ?? '') < (b.due_at ?? '') ? -1 : 1));
+  closeEditor(); renderAll();
+  toast('수정했습니다');
+}
+
+/** 지우는 건 되돌릴 수 없다 — 두 번 눌러야 지운다. */
+let delTimer = null;
+function confirmDelete(id, btn) {
+  if (btn.dataset.armed !== '1') {
+    btn.dataset.armed = '1';
+    btn.textContent = '정말 삭제';
+    clearTimeout(delTimer);
+    delTimer = setTimeout(() => { btn.dataset.armed = '0'; btn.textContent = '삭제'; }, 4000);
+    return;
+  }
+  clearTimeout(delTimer);
+  doDelete(id, btn);
+}
+
+async function doDelete(id, btn) {
+  btn.disabled = true; btn.textContent = '지우는 중';
+  const { error } = await sb.from('sp_item').delete().eq('id', id);
+  if (error) {
+    btn.disabled = false; btn.dataset.armed = '0'; btn.textContent = '삭제';
+    toast(`삭제 실패: ${error.message}`, true); return;
+  }
+  const i = S.items.findIndex((x) => x.id === id);
+  if (i >= 0) S.items.splice(i, 1);
+  closeEditor(); renderAll();
+  toast('삭제했습니다');
 }
 
 /** 체크한 행만 제자리에서 갱신한다. 리스트 전체를 다시 그리면 완료 항목이
