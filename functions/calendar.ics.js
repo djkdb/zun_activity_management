@@ -6,11 +6,15 @@
 import { buildCalendar } from '../public/lib/ics.mjs';
 import { rest, SUPABASE_URL, SUPABASE_ANON_KEY } from '../public/lib/config.mjs';
 
-/** schedule.json 을 같은 배포본에서 읽어 고정 일정을 평탄화한다. */
-async function fixedBlocks(origin) {
+/**
+ * schedule.json 을 같은 배포본에서 읽어 고정 일정을 평탄화한다.
+ * Worker 가 자기 호스트로 fetch 하면 실패한다 — 정적 자산은 ASSETS 바인딩으로 읽는다.
+ */
+async function fixedBlocks(origin, env) {
   try {
-    const res = await fetch(`${origin}/schedule.json`, { cf: { cacheTtl: 300 } });
-    if (!res.ok) return { blocks: [], termEnd: null };
+    const req = new Request(`${origin}/schedule.json`);
+    const res = env?.ASSETS?.fetch ? await env.ASSETS.fetch(req) : await fetch(req);
+    if (!res.ok) return { blocks: [], termEnd: null, why: `schedule.json ${res.status}` };
     const s = await res.json();
     const out = [];
     for (const c of s.classes ?? []) {
@@ -25,8 +29,8 @@ async function fixedBlocks(origin) {
     for (const p of s.parttime ?? [])
       for (const sl of p.slots ?? [])
         out.push({ ...sl, kind: '알바', label: p.label, color: null, detail: null, alba: true });
-    return { blocks: out, termEnd: s.term_end ?? null };
-  } catch { return { blocks: [], termEnd: null }; }
+    return { blocks: out, termEnd: s.term_end ?? null, why: null };
+  } catch (e) { return { blocks: [], termEnd: null, why: String(e?.message ?? e).slice(0, 120) }; }
 }
 
 export async function onRequestGet({ request, env }) {
@@ -44,8 +48,8 @@ export async function onRequestGet({ request, env }) {
     ]);
 
     const withSchedule = opt('schedule') !== '0';
-    const { blocks, termEnd } = withSchedule
-      ? await fixedBlocks(url.origin) : { blocks: [], termEnd: null };
+    const { blocks, termEnd, why } = withSchedule
+      ? await fixedBlocks(url.origin, env) : { blocks: [], termEnd: null, why: null };
 
     const ics = buildCalendar({
       items, activities,
@@ -63,6 +67,10 @@ export async function onRequestGet({ request, env }) {
         // 아이폰이 자주 당겨가되 서버를 괴롭히지 않는 선
         'Cache-Control': 'public, max-age=300',
         'Access-Control-Allow-Origin': '*',
+        // 조용히 비는 일이 없도록 진단값을 남긴다
+        'X-Zun-Items': String(items.length),
+        'X-Zun-Fixed': String(blocks.length),
+        ...(why ? { 'X-Zun-Schedule-Error': why } : {}),
       },
     });
   } catch (e) {
