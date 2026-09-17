@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 
-import { db, listActivities, listUpcoming, searchItems, itemsOnDate, ConfigError, loadEnv } from '../src/db.mjs';
+import { db, listActivities, listUpcoming, searchItems, itemsOnDate, ConfigError, loadEnv, ROOT } from '../src/db.mjs';
 import { buildPrompt } from '../src/prompt.mjs';
 import { normalize } from '../src/parse.mjs';
 import { parseText, ClaudeMissingError, JsonExtractError } from '../src/providers/ai/index.mjs';
@@ -14,7 +14,8 @@ import {
   A, hex, table, fmtDue, ddayLabel, dday, seoulYMD, seoulDow,
   truncate, ok, warn, err,
 } from '../src/render.mjs';
-import { conflictReason, byDay, scheduleText } from '../src/schedule.mjs';
+import { conflictReason, byDay, scheduleText, blocks as fixedBlocks, schedule } from '../src/schedule.mjs';
+import { buildCalendar } from '../src/providers/export/ics.mjs';
 
 // ── 인터랙션 ──────────────────────────────────────────────────────────
 let _rl = null;
@@ -396,6 +397,47 @@ async function cmdDone(term, opts) {
   return 0;
 }
 
+// ── 명령: export ──────────────────────────────────────────────────
+async function cmdExport(opts) {
+  const out = opts.out ?? join(ROOT, 'public', 'calendar.ics');
+  const [activities, items] = await Promise.all([
+    listActivities(),
+    (async () => {
+      const { data, error } = await db().from('sp_item').select('*').order('due_at');
+      if (error) throw error;
+      return data ?? [];
+    })(),
+  ]);
+
+  const sched = schedule();
+  const withFixed = !opts.noSchedule;
+  const ics = buildCalendar({
+    items, activities,
+    fixed: withFixed ? fixedBlocks() : [],
+    name: opts.name ?? 'zun',
+    termEnd: sched.term_end ?? null,
+    weeks: 16,
+    alarms: !opts.noAlarms,
+  });
+
+  writeFileSync(out, ics, 'utf8');
+
+  const evCount = (ics.match(/BEGIN:VEVENT/g) ?? []).length;
+  const alCount = (ics.match(/BEGIN:VALARM/g) ?? []).length;
+  console.log(ok(`${out}`));
+  console.log(`  일정 ${items.filter((i) => i.due_at).length}건` +
+    (withFixed ? ` + 고정 ${fixedBlocks().length}칸(매주 반복)` : '') +
+    ` → VEVENT ${evCount}개, 알림 ${alCount}개`);
+  if (withFixed && !sched.term_end)
+    console.log(warn('schedule.json 에 term_end 가 없어 고정 일정을 16주로 잡았습니다.'));
+  console.log(`\n${A.gray}배포하면 아이폰에서 구독할 수 있습니다:${A.reset}`);
+  console.log(`  git add public/calendar.ics && git commit -m "calendar" && git push`);
+  console.log(`  ${A.gray}설정 → 앱 → 캘린더 → 계정 → 계정 추가 → 기타 → 구독 캘린더 추가${A.reset}`);
+  const url = process.env.ZUN_DASHBOARD_URL;
+  if (url) console.log(`  ${A.underline}${url.replace(/\/$/, '')}/calendar.ics${A.reset}`);
+  return 0;
+}
+
 // ── 명령: open ────────────────────────────────────────────────────────
 function cmdOpen() {
   loadEnv();
@@ -426,6 +468,7 @@ ${A.bold}사용법${A.reset}
   zun ls [일수]                  다가오는 마감 (기본 30일)
   zun done <검색어>              제목 부분일치로 찾아 완료 토글
   zun open                      배포된 대시보드 열기
+  zun export                    public/calendar.ics 생성 (아이폰 구독용)
 
 ${A.bold}옵션${A.reset}
   -f, --file <경로>     원문 파일
@@ -433,6 +476,9 @@ ${A.bold}옵션${A.reset}
   -y, --yes             확인 없이 진행
       --dry-run         파싱·미리보기만 하고 저장하지 않음
       --no-fallback     AI 실패 시 규칙 기반으로 내려가지 않음
+      --out <경로>       (export) 저장 위치
+      --no-schedule     (export) 수업·근로·알바 고정 일정을 빼고 내보냄
+      --no-alarms       (export) D-7/D-3/D-1 알림을 빼고 내보냄
       --all             (ls) 완료된 일정도 표시
   -h, --help            이 도움말
 `;
@@ -448,6 +494,10 @@ function parseArgs(argv) {
     else if (a === '--dry-run') o.dryRun = true;
     else if (a === '--no-fallback') o.noFallback = true;
     else if (a === '--all') o.all = true;
+    else if (a === '--out') o.out = argv[++i];
+    else if (a === '--name') o.name = argv[++i];
+    else if (a === '--no-schedule') o.noSchedule = true;
+    else if (a === '--no-alarms') o.noAlarms = true;
     else if (a === '-h' || a === '--help') o.help = true;
     else o._.push(a);
   }
@@ -474,6 +524,7 @@ async function main() {
     }
     case 'done': return cmdDone(opts._.slice(1).join(' '), opts);
     case 'open': return cmdOpen();
+    case 'export': return cmdExport(opts);
     default: {
       // `zun "10월 15일까지 공모전 제출"` — 명령을 몰라도 그냥 말하면 된다.
       // 명령처럼 생긴 한 단어(영문·하이픈만)는 오타로 보고 도움말을 띄운다.
