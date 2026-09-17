@@ -815,10 +815,11 @@ function renderWeek() {
   const itemsOn = (d) => S.items.filter((it) => it.due_at && ymd(it.due_at) === d);
 
   // 그리드 시간 범위: 고정 일정과 시각이 있는 일정을 모두 담되 08–23시로 자른다
-  let lo = 9 * 60, hi = 18 * 60;
-  for (const b of S.fixed) { lo = Math.min(lo, toMin(b.start)); hi = Math.max(hi, toMin(b.end)); }
-  lo = Math.max(8 * 60, Math.floor(lo / 60) * 60);
-  hi = Math.min(23 * 60, Math.ceil(hi / 60) * 60);
+  // 아래는 24시까지 보여준다. 위쪽은 제일 이른 고정 일정에 맞춰 잘라 빈 칸을 줄인다.
+  let lo = 9 * 60;
+  for (const b of S.fixed) lo = Math.min(lo, toMin(b.start));
+  lo = Math.max(6 * 60, Math.floor(lo / 60) * 60);
+  const hi = 24 * 60;
   const PX = 46, H = ((hi - lo) / 60) * PX;
   const top = (min) => ((Math.max(lo, min) - lo) / 60) * PX;
 
@@ -848,7 +849,8 @@ function renderWeek() {
 
   const hours = [];
   for (let m = lo; m <= hi; m += 60) {
-    hours.push(`<span class="cal-time" style="top:${top(m)}px">${m / 60}시</span>`);
+    const label = m === 24 * 60 ? '자정' : `${m / 60}시`;
+    hours.push(`<span class="cal-time" style="top:${top(m)}px">${label}</span>`);
   }
   const lines = [];
   for (let m = lo + 60; m < hi; m += 60)
