@@ -1,9 +1,6 @@
 # Cloudflare Pages 헤더 규칙.
-# .ics 는 Content-Type 이 text/calendar 가 아니면 아이폰이 구독을 거부한다.
-/calendar.ics
-  Content-Type: text/calendar; charset=utf-8
-  Cache-Control: public, max-age=300
-  Access-Control-Allow-Origin: *
+# /calendar.ics 는 functions/calendar.ics.js 가 직접 헤더를 붙이므로 여기 없다.
+# (정적 파일을 두면 Function 보다 우선해서 낡은 파일이 나간다)
 
 /schedule.json
   Content-Type: application/json; charset=utf-8

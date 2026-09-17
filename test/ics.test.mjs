@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { esc, fold, itemEvent, fixedEvent, buildCalendar, defaultAlarms } from '../src/providers/export/ics.mjs';
+import { esc, fold, itemEvent, fixedEvent, buildCalendar, defaultAlarms } from '../public/lib/ics.mjs';
 
 const NOW = new Date('2026-09-17T12:00:00+09:00');
 const ACT = { id: 'a1', name: 'BC카드 공모전', color: '#007EEC' };
