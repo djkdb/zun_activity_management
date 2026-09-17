@@ -210,54 +210,76 @@ button{font-family:inherit}
 /* ═══ 카드 — 1px hairline, 18px, 그림자 없음 ══════════════════════ */
 .card{background:var(--canvas);border:1px solid var(--hairline);border-radius:var(--r-lg);padding:24px}
 
-/* ═══ 이번 주 그리드 ══════════════════════════════════════════════ */
+/* ═══ 이번 주 ═════════════════════════════════════════════════════ */
 .week{display:grid;grid-template-columns:repeat(7,1fr);gap:20px}
 .day{
   position:relative;background:var(--canvas);border:1px solid var(--hairline);
-  border-radius:var(--r-lg);padding:17px;min-height:168px;overflow:hidden;
+  border-radius:var(--r-lg);padding:20px;min-height:208px;
+  min-width:0;overflow:hidden;   /* nowrap 시각 텍스트가 그리드 트랙을 넓히지 않도록 */
 }
 .day.alba::before{
-  content:'';position:absolute;inset:0;pointer-events:none;
+  content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;
   background-image:repeating-linear-gradient(45deg,transparent 0 6px,var(--alba-line) 6px 12px);
 }
-.day.today{border:2px solid var(--accent);padding:16px}
-.day.past{opacity:.5}
+.day.today{border:2px solid var(--accent);padding:19px}
+.day.past{opacity:.45}
 .day > *{position:relative}
-.day-head{display:flex;align-items:baseline;gap:6px;margin-bottom:12px}
-.day-dow{font-size:14px;font-weight:600;line-height:1.29;letter-spacing:-.224px;color:var(--ink-48)}
-.day.today .day-dow{color:var(--accent)}
-.day-num{font-size:14px;letter-spacing:-.224px;color:var(--ink-48);font-variant-numeric:tabular-nums}
-.day-now{margin-left:auto;font-size:10px;line-height:1.3;letter-spacing:-.08px;color:var(--accent)}
-.alba-tag{
-  display:block;font-size:10px;line-height:1.3;letter-spacing:-.08px;color:var(--ink-48);
-  border:1px solid var(--field-line);border-radius:var(--r-sm);padding:3px 7px;margin-bottom:10px;
+.day-head{margin-bottom:17px}
+.day-dow{display:block;font-size:12px;line-height:1;letter-spacing:-.12px;color:var(--ink-48);margin-bottom:5px}
+.day-num{display:block;font-size:24px;font-weight:600;line-height:1;letter-spacing:-.24px;font-variant-numeric:tabular-nums}
+.day.today .day-dow,.day.today .day-num{color:var(--accent)}
+.day-now{
+  display:inline-block;margin-top:6px;font-size:10px;line-height:1.3;letter-spacing:-.08px;
+  color:var(--accent);border:1px solid var(--accent);border-radius:var(--r-pill);padding:2px 8px;
 }
-.ev{display:block;border-left:3px solid var(--c,var(--hairline));padding:2px 0 2px 9px;margin-bottom:12px}
-.ev .t{display:block;font-size:10px;line-height:1.3;letter-spacing:-.08px;color:var(--ink-48);font-variant-numeric:tabular-nums}
-.ev .n{display:block;font-size:14px;line-height:1.29;letter-spacing:-.224px}
+.alba-tag{
+  display:block;font-size:11px;line-height:1.3;letter-spacing:-.08px;color:var(--ink-48);
+  border:1px solid var(--field-line);border-radius:var(--r-sm);padding:4px 8px;margin-bottom:14px;
+}
+.ev{display:block;border-left:3px solid var(--c,var(--hairline));padding:1px 0 1px 10px;margin-bottom:14px}
+.ev:last-child{margin-bottom:0}
+.ev .t{display:block;font-size:12px;line-height:1.3;letter-spacing:-.12px;color:var(--ink-48);
+  font-variant-numeric:tabular-nums;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev .n{display:block;font-size:14px;line-height:1.36;letter-spacing:-.224px;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ev.flag{border-left-color:var(--flag)}
 .ev.flag .n{color:var(--flag)}
 .ev.is-done .n{color:var(--ink-48);text-decoration:line-through}
 .day-none{font-size:14px;letter-spacing:-.224px;color:var(--ink-48)}
 
-/* ═══ 마감 리스트 ═════════════════════════════════════════════════ */
+/* ═══ 마감 — 날짜별로 묶는다 ══════════════════════════════════════ */
 .due{list-style:none;margin:0;padding:0;border:1px solid var(--hairline);border-radius:var(--r-lg);overflow:hidden;background:var(--canvas)}
-.due-row{display:grid;grid-template-columns:auto 64px 1fr auto;gap:17px;align-items:center;padding:17px 24px;border-bottom:1px solid var(--divider-soft)}
-.due-row:last-child{border-bottom:0}
+.d-head{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;
+  padding:17px 24px 10px;border-top:1px solid var(--divider-soft);background:var(--parchment);
+}
+.due > .d-head:first-child{border-top:0}
+.d-when{font-size:17px;font-weight:600;line-height:1.24;letter-spacing:-.374px}
+.d-dd{font-size:14px;font-weight:600;line-height:1.29;letter-spacing:-.224px;color:var(--ink-48);font-variant-numeric:tabular-nums}
+.d-head.is-soon .d-when,.d-head.is-soon .d-dd{color:var(--accent)}
+.d-alba{margin-left:auto;font-size:12px;line-height:1;letter-spacing:-.12px;color:var(--ink-48);
+  border:1px solid var(--field-line);border-radius:var(--r-pill);padding:5px 10px}
+
+.due-row{
+  display:grid;grid-template-columns:auto 1fr auto;gap:17px;align-items:start;
+  padding:14px 24px;border-top:1px solid var(--divider-soft);
+}
+.d-head + .due-row{border-top:0}
 .due-row.is-done{opacity:.45}
 .due-row.is-done .due-t{text-decoration:line-through}
 .due-row.flag{background:var(--flag-bg)}
 .cbx-w{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-11px;cursor:pointer;flex:none}
 .cbx{width:22px;height:22px;accent-color:var(--accent);cursor:pointer;margin:0;flex:none}
-.dday{font-size:14px;font-weight:600;line-height:1.29;letter-spacing:-.224px;color:var(--ink-48);font-variant-numeric:tabular-nums;text-align:center}
-.dday.soon{color:var(--accent)}
-.due-m{min-width:0}
-.due-t{display:block;font-size:17px;line-height:1.24;letter-spacing:-.374px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.due-s{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin-top:4px;font-size:14px;line-height:1.43;letter-spacing:-.224px;color:var(--ink-48)}
-.tag{display:inline-flex;align-items:center;gap:6px}
+.due-m{min-width:0;padding-top:1px}
+.due-t{display:block;font-size:17px;line-height:1.35;letter-spacing:-.374px}
+.due-s{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin-top:5px;
+  font-size:14px;line-height:1.43;letter-spacing:-.224px;color:var(--ink-48)}
+.tag{display:inline-flex;align-items:center;gap:6px;min-width:0}
 .tag .dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
 .tag.warn{color:var(--flag)}
 .tag.req{color:var(--ink-80);font-weight:600}
-.due-w{font-size:14px;letter-spacing:-.224px;color:var(--ink-48);white-space:nowrap;font-variant-numeric:tabular-nums}
+.due-w{font-size:14px;line-height:1.5;letter-spacing:-.224px;color:var(--ink-48);
+  white-space:nowrap;font-variant-numeric:tabular-nums;padding-top:1px}
 .none{padding:48px 24px;text-align:center;font-size:17px;letter-spacing:-.374px;color:var(--ink-48)}
 
 /* ═══ 활동 카드 ═══════════════════════════════════════════════════ */
@@ -399,8 +421,7 @@ body.booted #week,body.booted #due,body.booted #acts{animation:fade .4s ease bot
 }
 @media (max-width:833px){
   .week{grid-template-columns:repeat(2,1fr)}
-  .due-row{grid-template-columns:auto 56px 1fr;row-gap:6px}
-  .due-w{grid-column:3}
+  .day{min-height:0}
 }
 @media (max-width:735px){
   .tile{padding:48px 0}
@@ -408,14 +429,52 @@ body.booted #week,body.booted #due,body.booted #acts{animation:fade .4s ease bot
   .gnav-in,.snav-in{padding-left:16px;padding-right:16px}
   .tile-head h2{font-size:28px;letter-spacing:-.28px}
   .tile-head .lead{font-size:17px;letter-spacing:-.374px}
-  .day{min-height:0}
+  .d-head{padding:14px 16px 8px}
+  .due-row{padding:14px 16px}
 }
 @media (max-width:640px){
-  .week{grid-template-columns:1fr}
   .acts,.gaps{grid-template-columns:1fr}
-  .cd{margin-left:0;width:100%}
+  .due-row{gap:12px}
+
+  /* 제목 옆에 붙은 설명이 숫자 중간에서 줄바꿈된다 → 아래로 내린다 */
+  .tile-head .row{display:block}
+  .tile-head .row .lead{margin-top:8px}
+  .tile-head .seg{margin-top:16px}
+
+  /* 서브내비: 폰에서 ' 일정' 라벨은 정보가 없다. 카운트다운만 한 줄로 남긴다 */
+  .snav-in{padding-top:6px;padding-bottom:6px;min-height:0}
+  .snav{min-height:0}
+  .snav .cat{display:none}
+  .cd{margin-left:0;width:100%;gap:8px}
   .cd .ttl{flex:1;min-width:0;max-width:none}
-  .due-row{padding:17px 16px;gap:12px}
+  .cd .val{margin-left:auto}
+
+  /* 주간: 한 줄씩 쌓되, 일정 없는 날은 한 줄로 접어 스크롤을 줄인다 */
+  .week{grid-template-columns:1fr;gap:10px}
+  .day{padding:16px}
+  .day.today{padding:15px}
+  .day-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+  .day-dow{margin-bottom:0;font-size:13px}
+  .day-num{font-size:19px}
+  .day-now{margin-top:0;margin-left:auto}
+  .day.is-empty{
+    min-height:0;padding:12px 16px;background:transparent;
+    border-style:dashed;opacity:.7;
+  }
+  .day.is-empty.today{border-style:solid;opacity:1;padding:11px 15px}
+
+  /* 필터 칩 7개가 세로로 쌓이면 화면 절반을 먹는다 → 가로 스트립으로 */
+  .chips{
+    flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;margin:0 -16px 20px;padding:0 16px 2px;
+  }
+  .chips::-webkit-scrollbar{display:none}
+  .chips .chip{flex:none}
+  .day.is-empty .day-head{margin-bottom:0}
+  .day.is-empty .day-none{display:none}
+  .day.is-empty .alba-tag{margin:0 0 0 auto;border:0;padding:0}
+  .ev .n{-webkit-line-clamp:4}
+
   /* 좁은 화면에서 7열 표는 가로 스크롤을 만든다 → 카드 스택으로 바꾼다 */
   .tw{overflow-x:visible;border:0;border-radius:0;background:none}
   table{min-width:0;display:block}
@@ -439,6 +498,8 @@ body.booted #week,body.booted #due,body.booted #acts{animation:fade .4s ease bot
 @media (max-width:419px){
   .tile-head h2{font-size:24px}
   .form{grid-template-columns:1fr}
+  .d-alba{margin-left:0}
+  .due-w{font-size:13px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -709,7 +770,8 @@ function renderWeek() {
   document.getElementById('week').innerHTML = days.map((d, n) => {
     const list = S.items.filter((it) => it.due_at && ymd(it.due_at) === d);
     const alba = isAlbaDay(d);
-    const cls = ['day', alba ? 'alba' : '', d === today ? 'today' : '', d < today ? 'past' : ''].filter(Boolean).join(' ');
+    const cls = ['day', alba ? 'alba' : '', d === today ? 'today' : '',
+      d < today ? 'past' : '', list.length ? '' : 'is-empty'].filter(Boolean).join(' ');
     const evs = list.length ? list.map((it) => {
       const act = S.byId.get(it.activity_id);
       return `<span class="ev${it.conflict ? ' flag' : ''}${it.done ? ' is-done' : ''}" style="--c:${colorOf(act)}"
@@ -777,6 +839,35 @@ function updateDueHint() {
     `${S.range === 'all' ? '전체' : `${S.range}일 내`} · 남은 ${open}건 / ${list.length}건${conf ? ` · 충돌 ${conf}건` : ''}`;
 }
 
+function dateHead(due, today) {
+  const d = ymd(due);
+  const n = dday(due, today);
+  const [, m, dd] = d.split('-');
+  return `<li class="d-head${n <= 1 ? ' is-soon' : ''}">
+    <span class="d-when">${Number(m)}월 ${Number(dd)}일 ${dow(due)}</span>
+    <span class="d-dd">${ddayText(n)}</span>
+    ${isAlbaDay(d) ? '<span class="d-alba">알바 17–22시</span>' : ''}
+  </li>`;
+}
+
+function rowHtml(it) {
+  const act = S.byId.get(it.activity_id);
+  return `<li class="due-row${it.conflict ? ' flag' : ''}${it.done ? ' is-done' : ''}" data-id="${it.id}">
+    <label class="cbx-w"><input class="cbx" type="checkbox" ${it.done ? 'checked' : ''}
+      aria-label="${esc(it.title)} 완료" data-id="${it.id}"></label>
+    <span class="due-m">
+      <span class="due-t">${esc(it.title)}</span>
+      <span class="due-s">
+        <span class="tag" style="--c:${colorOf(act)}"><i class="dot"></i>${esc(act?.name ?? '-')}</span>
+        <span>${esc(it.kind ?? '')}</span>
+        ${it.required ? '<span class="tag req">필수</span>' : ''}
+        ${it.conflict ? `<span class="tag warn">${esc(it.conflict_why ?? '일정 충돌')}</span>` : ''}
+      </span>
+    </span>
+    <span class="due-w">${it.all_day ? '종일' : esc(hm(it.due_at))}</span>
+  </li>`;
+}
+
 function renderDue() {
   const today = ymd(new Date());
   const list = currentDueList().slice()
@@ -786,25 +877,18 @@ function renderDue() {
   const ul = document.getElementById('due');
   if (!list.length) { ul.innerHTML = '<li class="none">다가오는 마감이 없습니다.</li>'; return; }
 
-  ul.innerHTML = list.map((it) => {
-    const act = S.byId.get(it.activity_id);
-    const n = dday(it.due_at, today);
-    return `<li class="due-row${it.conflict ? ' flag' : ''}${it.done ? ' is-done' : ''}" data-id="${it.id}">
-      <label class="cbx-w"><input class="cbx" type="checkbox" ${it.done ? 'checked' : ''}
-        aria-label="${esc(it.title)} 완료" data-id="${it.id}"></label>
-      <span class="dday${n <= 1 ? ' soon' : ''}">${ddayText(n)}</span>
-      <span class="due-m">
-        <span class="due-t">${esc(it.title)}</span>
-        <span class="due-s">
-          <span class="tag" style="--c:${colorOf(act)}"><i class="dot"></i>${esc(act?.name ?? '-')}</span>
-          <span>${esc(it.kind ?? '')}</span>
-          ${it.required ? '<span class="tag req">필수</span>' : ''}
-          ${it.conflict ? `<span class="tag warn">${esc(it.conflict_why ?? '일정 충돌')}</span>` : ''}
-        </span>
-      </span>
-      <span class="due-w">${esc(md(it.due_at.slice(0,10)))} ${it.all_day ? '종일' : esc(hm(it.due_at))}</span>
-    </li>`;
-  }).join('');
+  // 날짜가 행마다 반복되면 읽기 어렵다. 날짜를 머리글로 올리고 그 아래 일정만 둔다.
+  const out = [];
+  let group = null;
+  for (const it of list) {
+    const key = it.done ? 'done' : ymd(it.due_at);
+    if (key !== group) {
+      group = key;
+      out.push(it.done ? '<li class="d-head">완료</li>' : dateHead(it.due_at, today));
+    }
+    out.push(rowHtml(it));
+  }
+  ul.innerHTML = out.join('');
 
   ul.querySelectorAll('.cbx').forEach((c) => c.addEventListener('change', () => toggleDone(c.dataset.id, c.checked)));
 }
