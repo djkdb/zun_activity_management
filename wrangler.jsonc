@@ -1,0 +1,14 @@
+{
+  // Cloudflare Workers 설정. 대시보드에서 만든 Worker 이름과 같아야
+  // 새 Worker 가 생기지 않고 기존 것에 배포된다.
+  "name": "zm",
+  "main": "worker/index.js",
+  "compatibility_date": "2024-11-01",
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  "observability": { "enabled": true }
+}

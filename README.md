@@ -191,45 +191,63 @@ npm run serve     # http://localhost:5173
 
 ---
 
-## 4. Cloudflare Pages 배포
+## 4. Cloudflare 배포
 
-정적 파일 + Pages Function 하나로 돌아간다. **빌드 스텝이 없다.**
+정적 파일 + Worker 하나. **빌드 스텝이 없다.**
 
-1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages**
-   (계정에 따라 **Compute** 아래)
-2. **Create application** → **Pages** → **Connect to Git**
-3. `djkdb/zun_activity_management` 선택
-4. 빌드 설정 — **여기가 중요하다**
+Cloudflare 는 지금 새 프로젝트를 **Workers(Static Assets)** 로 유도한다
+(주소가 `*.workers.dev`). Pages 로 만들면 주소가 `*.pages.dev` 다.
+**이 저장소는 둘 다 지원한다.**
+
+| | Workers | Pages |
+|---|---|---|
+| 주소 | `<이름>.<계정>.workers.dev` | `<프로젝트>.pages.dev` |
+| 설정 | `wrangler.jsonc` + `worker/index.js` | `functions/` 를 자동 인식 |
+| `/calendar.ics` | `worker/index.js` 가 라우팅 | Pages 가 자동 라우팅 |
+
+두 경로 모두 **같은 구현**(`functions/calendar.ics.js`)을 쓴다.
+
+### Workers 로 배포할 때 (현재 방식)
+
+1. **Workers & Pages** → **Create** → **Import a repository**
+2. `djkdb/zun_activity_management` 선택
+3. 설정:
 
 | 항목 | 값 |
 |---|---|
-| Production branch | `claude/lucid-euler-wqemr3` |
+| Branch | `claude/lucid-euler-wqemr3` |
+| Build command | **비워둔다** |
+| Deploy command | `npx wrangler deploy` (기본값 그대로면 된다) |
+
+`wrangler.jsonc` 가 나머지를 정한다 — 이름 `zm`, 정적 파일은 `public/`,
+`main` 은 `worker/index.js`.
+
+> ⚠️ `wrangler.jsonc` 의 `name` 은 **대시보드에서 만든 Worker 이름과 같아야 한다.**
+> 다르면 같은 이름의 Worker 가 따로 하나 더 생긴다.
+
+### Pages 로 배포할 때
+
+| 항목 | 값 |
+|---|---|
 | Framework preset | **None** |
 | Build command | **반드시 비워둔다** |
 | Build output directory | `public` |
-| Root directory | 비워둔다 (저장소 루트) |
+| Root directory | 비워둔다 |
 
-> `package.json` 이 있어서 Pages 가 Node 프로젝트로 감지하고 `npm run build` 를
-> 넣으려 할 수 있다. 이 프로젝트엔 `build` 스크립트가 없으므로 **비워야 한다.**
-
-5. 환경변수는 **넣지 않는다.** anon 키는 코드에 있고 그게 의도된 구조다.
-   (원하면 `SUPABASE_URL` · `SUPABASE_ANON_KEY` 를 넣어 덮어쓸 수는 있다)
-6. **Save and Deploy**
+`public/_routes.json` 이 `/calendar.ics` 만 Function 으로 보낸다 (Pages 전용 파일.
+Workers 에서는 무시된다).
 
 ### 배포되면 확인할 것
 
-```
-https://<프로젝트>.pages.dev              대시보드가 뜨는가
-https://<프로젝트>.pages.dev/calendar.ics  BEGIN:VCALENDAR 로 시작하는가
+```bash
+curl -sI https://<주소>/calendar.ics | grep -i content-type
+#   content-type: text/calendar; charset=utf-8   ← 이게 나와야 아이폰이 받는다
+curl -s  https://<주소>/calendar.ics | head -3
+#   BEGIN:VCALENDAR …
 ```
 
-`/calendar.ics` 는 `functions/calendar.ics.js` 가 **요청마다 DB 를 읽어 만든다.**
-정적 파일이 아니다 — 웹에서 일정을 넣으면 아이폰이 다음 갱신 때 바로 받아간다.
-
-- `functions/` 는 저장소 루트에 있고 Pages 가 알아서 잡는다.
-- `public/_routes.json` 이 **`/calendar.ics` 만** Function 으로 보낸다.
-  나머지는 CDN 정적 서빙이라 빠르고 무료 한도도 덜 쓴다.
-- `public/_headers` 가 `.mjs` 와 `schedule.json` 의 Content-Type 을 지정한다.
+`/calendar.ics` 는 **요청마다 DB 를 읽어 만든다.** 정적 파일이 아니다 —
+웹에서 일정을 넣으면 아이폰이 다음 갱신 때 바로 받아간다.
 
 ### 안 될 때
 
