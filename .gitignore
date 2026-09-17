@@ -1,0 +1,12 @@
+# secrets — service_role key lives here, never commit
+.env
+.env.local
+.env.*.local
+
+node_modules/
+npm-debug.log*
+.DS_Store
+*.log
+
+# zun scratch
+.zun-tmp/
