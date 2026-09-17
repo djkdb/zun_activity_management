@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseDate, fallbackParse, looksLikeDeadline } from '../src/providers/ai/fallback.mjs';
-import { seoulYMD, seoulHM } from '../src/core/dates.mjs';
+import { parseDate, fallbackParse, looksLikeDeadline } from '../public/lib/parse-rules.mjs';
+import { seoulYMD, seoulHM } from '../public/lib/dates.mjs';
 
 const NOW = new Date('2026-09-17T12:00:00+09:00'); // 목요일
 

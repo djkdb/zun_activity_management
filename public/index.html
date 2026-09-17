@@ -198,6 +198,30 @@ code,.mono{font-family:var(--mono)}
 }
 .seg button[aria-pressed="true"]{background:var(--accent-btn);color:var(--on-accent);font-weight:700}
 
+/* ═══ 빠른 입력 ═══════════════════════════════════════════════════ */
+.cap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:var(--gap)}
+.cap textarea{
+  width:100%;min-height:84px;resize:vertical;font-family:inherit;font-size:15px;line-height:1.6;
+  color:var(--ink);background:var(--panel-2);border:1px solid var(--line-2);
+  border-radius:var(--radius-sm);padding:12px 14px;
+}
+.cap textarea:focus{outline:2px solid var(--accent-btn);outline-offset:-1px;border-color:transparent}
+.cap-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:12px}
+.cap-bar .f{flex:1;min-width:160px}
+.cap-hint{margin:12px 0 0;font-size:13px;color:var(--ink-2)}
+.cap-hint.bad{color:var(--bad)}
+.cap-list{list-style:none;margin:12px 0 0;padding:0;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.cap-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;
+  padding:12px var(--gap);border-top:1px solid var(--line);background:var(--panel-2)}
+.cap-list .cap-row:first-child{border-top:0}
+.cap-row.flag{background:var(--warn-soft)}
+.cap-row .cbx-w{margin:-12px 0 0 -11px}
+.cap-row .t{display:block;font-size:15px}
+.cap-row .s{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px;font-size:13px;color:var(--ink-2)}
+.cap-row .s .warn{color:var(--warn)}
+.cap-row .w{font-size:13px;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums;padding-top:2px}
+.cap-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+
 /* ═══ 이번 주 — 시간표 캘린더 ═════════════════════════════════════ */
 .legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-bottom:var(--gap);font-size:12px;color:var(--ink-2)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--c,var(--ink-3))}
@@ -467,6 +491,7 @@ body.booted main > .sec{animation:appear .5s ease both}
   </div>
 
   <nav class="side-nav" aria-label="섹션">
+    <a href="#s-capture" data-sec="s-capture"><span>빠른 입력</span></a>
     <a href="#s-week"  data-sec="s-week"><span>이번 주</span><b class="n" id="n-week"></b></a>
     <a href="#s-due"   data-sec="s-due"><span>다가오는 마감</span><b class="n" id="n-due"></b></a>
     <a href="#s-acts"  data-sec="s-acts"><span>활동별 현황</span><b class="n" id="n-acts"></b></a>
@@ -503,6 +528,30 @@ body.booted main > .sec{animation:appear .5s ease both}
   <div id="err-wrap" class="sec" hidden>
     <div class="inner"><div class="err" id="err"></div></div>
   </div>
+
+  <!-- 빠른 입력 -->
+  <section class="sec" id="s-capture">
+    <div class="sec-head">
+      <div class="row">
+        <h2>빠른 입력</h2>
+        <p class="lead">생각나면 그냥 던지세요. 날짜가 있으면 알아서 읽습니다.</p>
+      </div>
+    </div>
+    <div class="cap">
+      <label class="sr" for="cap-text">일정 원문</label>
+      <textarea id="cap-text" rows="3"
+        placeholder="10월 15일까지 공모전 제출&#10;다음주 금요일 6시에 팀 회의"></textarea>
+      <div class="cap-bar">
+        <div class="f">
+          <label for="cap-act">활동</label>
+          <select id="cap-act"><option value="">활동 없음</option></select>
+        </div>
+        <button class="btn" type="button" id="cap-read">읽기</button>
+        <button class="btn btn--quiet" type="button" id="cap-clear">지우기</button>
+      </div>
+      <div id="cap-out"></div>
+    </div>
+  </section>
 
   <!-- 이번 주 -->
   <section class="sec" id="s-week">
@@ -614,6 +663,9 @@ body.booted main > .sec{animation:appear .5s ease both}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// CLI 와 같은 규칙 파서를 쓴다. 브라우저에서는 claude 서브프로세스를 못 돌리므로
+// 여기서는 규칙 기반으로 읽고, 더 정교한 파싱이 필요하면 CLI 가 나중에 손본다.
+import { fallbackParse } from './lib/parse-rules.mjs';
 
 // anon 키는 RLS 로 보호된다 — 읽기 + sp_item 체크오프 + sp_output 기록만 가능.
 const SUPABASE_URL = 'https://rlisxmxytrvapkgcqkgf.supabase.co';
@@ -1092,6 +1144,13 @@ function renderActs() {
 
 // ── 4. 산출물 ───────────────────────────────────────────────────
 function renderActOptions() {
+  const cap = document.getElementById('cap-act');
+  if (cap) {
+    const cur = cap.value;
+    cap.innerHTML = '<option value="">활동 없음</option>' +
+      S.activities.map((a) => `<option value="${esc(a.slug)}">${esc(a.name)}</option>`).join('');
+    if (cur) cap.value = cur;
+  }
   const sel = document.getElementById('o-act');
   const cur = sel.value;
   sel.innerHTML = '<option value="">선택</option>' +
@@ -1192,6 +1251,123 @@ function renderGaps() {
       <code>zun add --activity ${esc(a.slug)}</code>
     </div>`).join('');
 }
+
+// ── 빠른 입력 ───────────────────────────────────────────────────
+let capParsed = [];
+
+/** 고정 일정과 겹치는지 — 대시보드가 이미 들고 있는 S.fixed 를 쓴다. */
+function conflictOf(dueISO, allDay) {
+  if (!dueISO || allDay) return null;
+  const day = dow(dueISO);
+  const at = toMin(hm(dueISO));
+  const rank = { 알바: 0, 수업: 1, 근로: 2 };
+  const hit = fixedOn(day)
+    .filter((b) => at >= toMin(b.start) && at < toMin(b.end))
+    .sort((a, b) => rank[a.kind] - rank[b.kind])[0];
+  if (!hit) return null;
+  const when = `${hit.day} ${hit.start.replace(':00', '')}–${hit.end.replace(':00', '')}시`;
+  return hit.kind === '알바' ? `${when} ${hit.label}와 겹침`
+       : hit.kind === '근로' ? `${when} 근로와 겹침`
+       : `${when} ${hit.label} 수업과 겹침`;
+}
+
+function renderCapture() {
+  const box = document.getElementById('cap-out');
+  if (!capParsed.length) { box.innerHTML = ''; return; }
+  const rows = capParsed.map((it, n) => {
+    const why = it.conflict_why;
+    return `<li class="cap-row${why ? ' flag' : ''}">
+      <label class="cbx-w"><input class="cbx" type="checkbox" data-n="${n}"
+        ${it._on ? 'checked' : ''} aria-label="${esc(it.title)} 저장"></label>
+      <span>
+        <span class="t">${esc(it.title)}</span>
+        <span class="s"><span>${esc(it.kind)}</span>
+          ${why ? `<span class="warn">⚠ ${esc(why)}</span>` : ''}</span>
+      </span>
+      <span class="w">${esc(md(ymd(it.due_at)))} ${it.all_day ? '종일' : esc(hm(it.due_at))}</span>
+    </li>`;
+  }).join('');
+  const on = capParsed.filter((i) => i._on).length;
+  box.innerHTML = `<ul class="cap-list">${rows}</ul>
+    <div class="cap-actions">
+      <button class="btn" type="button" id="cap-save" ${on ? '' : 'disabled'}>${on}건 저장</button>
+      <button class="btn btn--quiet" type="button" id="cap-cancel">취소</button>
+    </div>`;
+  box.querySelectorAll('.cap-row .cbx').forEach((c) => c.addEventListener('change', () => {
+    capParsed[Number(c.dataset.n)]._on = c.checked; renderCapture();
+  }));
+  document.getElementById('cap-save')?.addEventListener('click', saveCapture);
+  document.getElementById('cap-cancel')?.addEventListener('click', () => {
+    capParsed = []; renderCapture();
+  });
+}
+
+function readCapture() {
+  const text = document.getElementById('cap-text').value.trim();
+  const box = document.getElementById('cap-out');
+  if (!text) { box.innerHTML = '<p class="cap-hint">읽을 내용이 없습니다.</p>'; return; }
+
+  const slug = document.getElementById('cap-act').value || null;
+  const r = fallbackParse(text, { activitySlug: slug });
+
+  capParsed = r.items.map((it) => ({
+    ...it, _on: true, conflict_why: it.conflict_why ?? conflictOf(it.due_at, it.all_day),
+  }));
+
+  if (!capParsed.length) {
+    box.innerHTML = `<p class="cap-hint bad">날짜를 찾지 못했습니다.</p>
+      <p class="cap-hint">“10월 15일까지 …”, “내일 오후 3시 …”, “다음주 금요일 …” 처럼
+      날짜를 넣어 보세요. 더 복잡한 문장은 터미널에서
+      <code>zun "…"</code> 를 쓰면 AI 가 읽습니다.</p>`;
+    return;
+  }
+  renderCapture();
+}
+
+async function saveCapture() {
+  const btn = document.getElementById('cap-save');
+  const chosen = capParsed.filter((i) => i._on);
+  if (!chosen.length) return;
+  btn.disabled = true; btn.textContent = '저장 중';
+
+  const bySlug = new Map(S.activities.map((a) => [a.slug, a]));
+  const rawText = document.getElementById('cap-text').value;
+  const rows = chosen.map((i) => ({
+    activity_id: i.activity_slug ? (bySlug.get(i.activity_slug)?.id ?? null) : null,
+    title: i.title, kind: i.kind, due_at: i.due_at, due_end: i.due_end,
+    all_day: i.all_day, stage: i.stage, required: i.required,
+    conflict: Boolean(i.conflict_why), conflict_why: i.conflict_why,
+    memo: i.memo, source: 'web', provider: 'manual',
+  }));
+
+  const { data, error } = await sb.from('sp_item').insert(rows).select();
+  if (error) {
+    btn.disabled = false; btn.textContent = `${chosen.length}건 저장`;
+    toast(`저장 실패: ${error.message}`, true);
+    return;
+  }
+  // 원문도 남긴다 — 나중에 CLI 가 AI 로 다시 읽을 수 있다
+  await sb.from('sp_ingest').insert({
+    raw_text: rawText, parsed: { items: chosen }, item_count: data.length, source: 'web',
+  }).then(({ error: e }) => { if (e) console.warn('sp_ingest:', e.message); });
+
+  S.items.push(...(data ?? []));
+  S.items.sort((a, b) => (a.due_at ?? '') < (b.due_at ?? '') ? -1 : 1);
+  capParsed = [];
+  document.getElementById('cap-text').value = '';
+  renderCapture(); renderAll();
+  toast(`${data.length}건 저장했습니다`);
+}
+
+document.getElementById('cap-read').addEventListener('click', readCapture);
+document.getElementById('cap-clear').addEventListener('click', () => {
+  document.getElementById('cap-text').value = '';
+  capParsed = []; renderCapture();
+});
+// ⌘/Ctrl + Enter 로 바로 읽기
+document.getElementById('cap-text').addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); readCapture(); }
+});
 
 // ── 카운트다운 ──────────────────────────────────────────────────
 function tickCountdown() {

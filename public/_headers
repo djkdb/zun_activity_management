@@ -8,3 +8,9 @@
 /schedule.json
   Content-Type: application/json; charset=utf-8
   Cache-Control: public, max-age=300
+
+# ESM 모듈. 잘못된 Content-Type 으로 나가면 브라우저가 모듈을 거부해
+# 대시보드가 통째로 안 뜬다.
+/lib/*
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: public, max-age=300

@@ -1,6 +1,6 @@
 // iCalendar(RFC 5545) 생성. 아이폰 '구독 캘린더'가 이 파일을 통째로 당겨간다.
 // UID 가 안정적이면 파일을 다시 써도 아이폰에서 중복이 생기지 않는다.
-import { seoulYMD, seoulHM, toMin, DOWS, addDays, kstISO } from '../../core/dates.mjs';
+import { seoulYMD, seoulHM, toMin, DOWS, addDays, kstISO } from '../../../public/lib/dates.mjs';
 
 const DOMAIN = 'zun.board';
 

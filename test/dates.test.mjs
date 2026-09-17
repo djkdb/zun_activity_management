@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   seoulYMD, seoulHM, seoulDow, addDays, dday, ddayLabel,
   kstISO, mondayOf, weekContext, endOfMonth, toMin, toHM,
-} from '../src/core/dates.mjs';
+} from '../public/lib/dates.mjs';
 
 // UTC 기준으로 돌려도 KST 날짜가 밀리지 않아야 한다 (가장 흔한 버그)
 test('KST 경계 — UTC 15:00 은 이미 다음 날 서울', () => {
