@@ -242,3 +242,104 @@ zun export → public/calendar.ics → git push → Pages 자동 배포
    쓰는지 알아야 설계할 수 있습니다. 안 쓰시면 이 항목은 빼겠습니다.
 3. **아이폰 연동은 위 '구독 캘린더' 방식으로 가도 될까요?** 읽기 전용이지만 앱 없이
    오늘 바로 됩니다. 양방향이 꼭 필요하면 범위가 크게 달라집니다.
+
+---
+
+# 부록 A — 결정 반영 (2026-09-17)
+
+## A-1. 스키마 변경 — 적용 완료 ✅
+
+승인받아 `sp_item` 에 추가 전용 컬럼 5개와 인덱스를 넣었다.
+마이그레이션명 `sp_item_hierarchy_and_sync_metadata`.
+
+```
+parent_id   uuid → sp_item(id) ON DELETE CASCADE   상위 일정 (마감 밑 마일스톤·할일·알림)
+external_id text                                   외부 식별자 (notion page url, ics uid)
+provider    text                                   notion | ics | manual
+synced_at   timestamptz                            마지막 동기화 시각
+sync_hash   text                                   내용 해시 — 바뀐 것만 다시 민다
+```
+
+- `UNIQUE (provider, external_id) WHERE external_id IS NOT NULL` — 같은 외부 객체가
+  두 번 들어오지 않는다. **idempotent sync 의 핵심.**
+- 검증: 적용 후 `sp_item` 39행 · `sp_activity` 8행 그대로, `zun ls/done/help` 회귀 없음.
+
+## A-2. 노션 — 실제 구조 (커넥터로 확인)
+
+워크스페이스 `성준 이의 Notion`. 즐겨찾기 두 개 모두 **이이웍스(eeworks) 템플릿**이다.
+`eeworks` 활동(이이웍스 대학생 크리에이터)이 바로 이 템플릿을 쓰고 콘텐츠로 올리는
+활동이라, 노션 연동 자체가 그 활동의 산출물이 된다.
+
+**상위 1% 커리어 하이 노션** — 취업 준비
+| 원본 DB | collection |
+|---|---|
+| Report DB | `db72204e-5cc1-835f-8001-871b7fba5fc4` |
+| **커리어 Todo** | `f522204e-5cc1-82c5-9037-07ff984c36cf` |
+
+**Study OS** — 학업
+| 원본 DB | collection |
+|---|---|
+| Report DB | `d6d2204e-5cc1-830b-a68a-072742de4742` |
+| Goals DB | `a9a2204e-5cc1-82ac-b7b9-87040f5a433d` |
+| Contents DB | `07a2204e-5cc1-8268-8dfe-8710b60103be` |
+| Study Sessions DB | `4b52204e-5cc1-834c-bde2-071d70144c6b` |
+| Notes DB | `2ee2204e-5cc1-8328-b53b-07f4a1d26b56` |
+
+### 커리어 Todo → sp_item 매핑 (거의 1:1)
+
+```
+Task Name (title)        → title
+일정 (date, 범위 가능)     → due_at / due_end / all_day(is_datetime=0)
+상태 (시작 전|진행 중|완료) → done (완료일 때 true)
+세부 내용 (text)          → memo
+page url                 → external_id   (provider='notion')
+선행 작업 / 후속 작업       → parent_id 로 근사
+예상 시간 (number)        → 현재 대응 칸 없음 (memo 로 두거나 나중에 판단)
+D-day, 기간 (formula)     → 읽지 않는다. 우리 쪽에서 계산한다
+```
+
+→ **읽기 방향(Notion → zun)부터 구현한다.** 쓰기(zun → Notion)는 원본 DB 를
+건드리는 일이라 나중에 따로 판단한다. 템플릿이 "속성 삭제 금지"를 명시하고 있어
+쓰기는 신중해야 한다.
+
+### 역할 분리 (요청하신 방향대로)
+
+```
+Notion        장기 기록·문서·취업 서류·학습 노트   ← 사람이 쓰는 곳
+zun           일정·마감·실행·알림                ← 기계가 모으는 곳
+Apple Calendar 시간 기반 일정                    ← 보는 곳
+```
+
+### ⚠️ 발견한 불일치 — 확인 필요
+
+Study OS 의 "내 학업 프로필" 은 이번 학기 과목을
+**인공지능 · 인공지능수학 · 시스템분석및설계 · 생활일본어 · 오픈소스 웹소프트웨어 ·
+컴퓨터네트워크 · 운영체제** 라고 적고 있다.
+
+하지만 시간표 스크린샷으로 확인한 실제 수강 과목은
+**컴퓨터시스템개론 · 데이터베이스시스템 · 소프트웨어공학 · 정보검색 · 머신러닝 ·
+몸매만들기와 보디빌딩** 이다.
+
+**겹치는 과목이 하나도 없다.** 노션 쪽이 템플릿 예시이거나 오래된 값으로 보인다.
+그래서 **노션에서 시간표를 자동으로 가져오지 않는다** — `public/schedule.json` 이
+계속 원본이다. 노션에서는 마감·할일만 가져온다.
+
+## A-3. 아이폰 — 구독 캘린더가 무엇인가
+
+기본 캘린더 앱에 **읽기 전용 달력 한 칸이 추가되는 것**이다. 앱 설치가 없다.
+
+```
+zun export → public/calendar.ics → git push → Cloudflare Pages 가 자동 배포
+                                                     ↓
+        아이폰 설정 → 앱 → 캘린더 → 계정 → 계정 추가 → 기타 → 구독 캘린더 추가
+                        https://<프로젝트>.pages.dev/calendar.ics
+                                                     ↓
+              기본 캘린더 앱에 'zun' 달력이 생기고, 아이폰이 주기적으로 당겨간다
+```
+
+- 기존 개인 일정과 **같은 화면에 겹쳐 보인다.** 색도 따로 지정된다.
+- `VALARM` 을 넣으면 **D-7/D-3/D-1 알림이 실제 아이폰 알림으로 온다.**
+- 파일 전체를 덮어쓰므로 **중복이 구조적으로 안 생긴다.**
+- 한계: **읽기 전용.** 아이폰에서 체크해도 zun 으로 돌아오지 않는다.
+  체크는 zun CLI 나 웹 대시보드에서 한다.
+- 미리알림(Reminders) 앱은 구독으로 안 된다. 필요해지면 iOS 단축어를 따로 붙인다.
