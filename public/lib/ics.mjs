@@ -45,6 +45,18 @@ export function defaultMinutes(kind) {
   return 30;   // 마감·제출·업로드·안내 — 짧게 잡아 캘린더를 덜 가린다
 }
 
+/**
+ * 제목 앞에 붙는 종류 표식.
+ * 아이폰 구독 캘린더는 '캘린더 1개 = 색 1개'라 VEVENT 단위로 색을 줄 수 없다.
+ * (RFC 7986 COLOR 속성이 있지만 Apple 캘린더는 무시한다.)
+ * 피드를 나눠 구독하면 색이 갈리고, 한 피드로 볼 때는 이 표식으로 구분한다.
+ */
+export const MARKS = {
+  수업: '🎓', 근로: '💼', 알바: '🛵',
+  마감: '⏰', 제출: '⏰', 회의: '📍', 행사: '📍',
+};
+export const markFor = (kind) => MARKS[kind] ?? '📌';
+
 /** 마감·제출은 D-7/D-3/D-1, 시간 약속은 1시간 전 */
 export function defaultAlarms(kind) {
   if (kind === '마감' || kind === '제출') return ['-P7D', '-P3D', '-P1D'];
@@ -62,7 +74,7 @@ function alarm(trigger, summary) {
 }
 
 /** sp_item 한 건 → VEVENT */
-export function itemEvent(item, activity, { now = new Date(), alarms = true } = {}) {
+export function itemEvent(item, activity, { now = new Date(), alarms = true, marks = true } = {}) {
   if (!item.due_at) return null;
   const actName = activity?.name ?? null;
   const summary = actName ? `${item.title} · ${actName}` : item.title;
@@ -70,7 +82,8 @@ export function itemEvent(item, activity, { now = new Date(), alarms = true } = 
 
   out.push(line('UID', `item-${item.id}@${DOMAIN}`));
   out.push(line('DTSTAMP', utcStamp(now.toISOString())));
-  out.push(line('SUMMARY', esc(`${item.done ? '✓ ' : ''}${summary}`)));
+  const mark = marks ? `${markFor(item.kind)} ` : '';
+  out.push(line('SUMMARY', esc(`${mark}${item.done ? '✓ ' : ''}${summary}`)));
 
   if (item.all_day) {
     out.push(line('DTSTART;VALUE=DATE', dateStamp(item.due_at)));
@@ -104,7 +117,7 @@ export function itemEvent(item, activity, { now = new Date(), alarms = true } = 
 }
 
 /** 고정 주간 일정 한 칸 → 매주 반복 VEVENT */
-export function fixedEvent(block, { from, count = 16, until = null, now = new Date() } = {}) {
+export function fixedEvent(block, { from, count = 16, until = null, now = new Date(), marks = true } = {}) {
   // from(월요일) 기준으로 그 주의 해당 요일을 첫 발생으로 잡는다
   const idx = DOWS.indexOf(block.day);
   const first = addDays(from, idx === 0 ? 6 : idx - 1);
@@ -113,7 +126,7 @@ export function fixedEvent(block, { from, count = 16, until = null, now = new Da
   const out = ['BEGIN:VEVENT'];
   out.push(line('UID', esc(uid)));
   out.push(line('DTSTAMP', utcStamp(now.toISOString())));
-  out.push(line('SUMMARY', esc(block.label)));
+  out.push(line('SUMMARY', esc(`${marks ? `${markFor(block.kind)} ` : ''}${block.label}`)));
   out.push(line('DTSTART', utcStamp(kstISO(first, block.start))));
   out.push(line('DTEND', utcStamp(kstISO(first, block.end))));
   const byday = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][idx];
@@ -129,11 +142,13 @@ export function fixedEvent(block, { from, count = 16, until = null, now = new Da
 /**
  * 전체 캘린더.
  * @param {{items:Array, activities:Array, fixed?:Array, name?:string, now?:Date,
- *          termEnd?:string|null, weeks?:number, alarms?:boolean}} o
+ *          termEnd?:string|null, weeks?:number, alarms?:boolean,
+ *          color?:string|null, marks?:boolean}} o
  */
 export function buildCalendar({
   items = [], activities = [], fixed = [],
   name = 'zun', now = new Date(), termEnd = null, weeks = 16, alarms = true,
+  color = null, marks = true,
 } = {}) {
   const byId = new Map(activities.map((a) => [a.id, a]));
   const lines = [
@@ -147,9 +162,11 @@ export function buildCalendar({
     'X-PUBLISHED-TTL:PT1H',            // 아이폰에 1시간마다 확인하라고 알린다
     'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
   ];
+  // 구독할 때 아이폰이 집어가는 기본 색. Apple 전용 확장이지만 이게 유일하게 먹힌다.
+  if (color) lines.push(line('X-APPLE-CALENDAR-COLOR', color));
 
   for (const it of items) {
-    const ev = itemEvent(it, byId.get(it.activity_id), { now, alarms });
+    const ev = itemEvent(it, byId.get(it.activity_id), { now, alarms, marks });
     if (ev) lines.push(...ev);
   }
 
@@ -157,7 +174,8 @@ export function buildCalendar({
     const from = (() => { const t = seoulYMD(now); const i = DOWS.indexOf(
       ['일','월','화','수','목','금','토'][new Date(kstISO(t, '12:00')).getUTCDay()]);
       return addDays(t, i === 0 ? -6 : 1 - i); })();
-    for (const b of fixed) lines.push(...fixedEvent(b, { from, count: weeks, until: termEnd, now }));
+    for (const b of fixed)
+      lines.push(...fixedEvent(b, { from, count: weeks, until: termEnd, now, marks }));
   }
 
   lines.push('END:VCALENDAR');

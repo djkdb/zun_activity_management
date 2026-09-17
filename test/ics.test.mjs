@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { esc, fold, itemEvent, fixedEvent, buildCalendar, defaultAlarms } from '../public/lib/ics.mjs';
+import { esc, fold, itemEvent, fixedEvent, buildCalendar, defaultAlarms, markFor } from '../public/lib/ics.mjs';
 
 const NOW = new Date('2026-09-17T12:00:00+09:00');
 const ACT = { id: 'a1', name: 'BC카드 공모전', color: '#007EEC' };
@@ -37,7 +37,7 @@ test('VEVENT — 시각 있는 마감', () => {
   const ev = itemEvent(ITEM, ACT, { now: NOW }).join('\r\n');
   assert.match(ev, /UID:item-i1@zun\.board/);
   assert.match(ev, /DTSTART:20261015T145900Z/);        // 23:59 KST = 14:59 UTC
-  assert.match(ev, /SUMMARY:공모전 제출 · BC카드 공모전/);
+  assert.match(ev, /SUMMARY:⏰ 공모전 제출 · BC카드 공모전/);
   assert.match(ev, /STATUS:CONFIRMED/);
   assert.match(ev, /CATEGORIES:마감/);
 });
@@ -55,7 +55,7 @@ test('마감에는 D-7/D-3/D-1 알람이 붙는다', () => {
 test('완료된 항목엔 알람을 달지 않는다', () => {
   const ev = itemEvent({ ...ITEM, done: true }, ACT, { now: NOW }).join('\r\n');
   assert.match(ev, /STATUS:COMPLETED/);
-  assert.match(ev, /SUMMARY:✓ /);
+  assert.match(ev, /SUMMARY:⏰ ✓ /);
   assert.ok(!ev.includes('BEGIN:VALARM'));
 });
 
@@ -104,4 +104,39 @@ test('끝 시각이 없으면 종류별 기본 길이를 준다 (길이 0 방지
   assert.match(meet, /DTEND:20261015T155900Z/);   // +1시간
   const due = itemEvent(ITEM, ACT, { now: NOW }).join('\r\n');
   assert.match(due, /DTEND:20261015T152900Z/);    // 마감은 +30분
+});
+
+test('종류 표식 — 한 피드에서도 눈으로 갈린다', () => {
+  assert.equal(markFor('수업'), '🎓');
+  assert.equal(markFor('근로'), '💼');
+  assert.equal(markFor('알바'), '🛵');
+  assert.equal(markFor('마감'), '⏰');
+  assert.equal(markFor('제출'), '⏰');
+  assert.equal(markFor('회의'), '📍');
+  assert.equal(markFor('없는종류'), '📌');
+  assert.equal(markFor(undefined), '📌');
+});
+
+test('marks:false 면 표식을 빼고 원래 제목만 남는다', () => {
+  const ev = itemEvent(ITEM, ACT, { now: NOW, marks: false }).join('\r\n');
+  assert.match(ev, /SUMMARY:공모전 제출 · BC카드 공모전/);
+  assert.ok(!ev.includes('⏰'));
+});
+
+test('고정 일정에도 표식이 붙는다', () => {
+  const ev = fixedEvent({ day: '화', start: '10:00', end: '12:00', label: '근로', kind: '근로' },
+    { from: '2026-10-12', now: NOW }).join('\r\n');
+  assert.match(ev, /SUMMARY:💼 근로/);
+});
+
+test('피드 색은 X-APPLE-CALENDAR-COLOR 로 나간다 — 아이폰이 읽는 유일한 값', () => {
+  const ics = buildCalendar({ items: [ITEM], activities: [ACT], name: 'zun 수업',
+    color: '#3478F6', now: NOW });
+  assert.match(ics, /X-APPLE-CALENDAR-COLOR:#3478F6/);
+  assert.match(ics, /X-WR-CALNAME:zun 수업/);
+});
+
+test('색을 안 주면 그 줄 자체가 없다', () => {
+  const ics = buildCalendar({ items: [ITEM], activities: [ACT], now: NOW });
+  assert.ok(!ics.includes('X-APPLE-CALENDAR-COLOR'));
 });

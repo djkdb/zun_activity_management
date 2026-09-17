@@ -259,7 +259,7 @@ code,.mono{font-family:var(--mono)}
 .cal-line{position:absolute;left:62px;right:0;border-top:1px solid var(--line);pointer-events:none}
 
 .blk{
-  position:absolute;left:3px;right:3px;border-radius:var(--radius-sm);padding:5px 7px;overflow:hidden;
+  position:absolute;border-radius:var(--radius-sm);padding:5px 7px;overflow:hidden;
   border-left:3px solid var(--c,var(--ink-3));
   background:color-mix(in srgb,var(--c,var(--ink-3)) 13%,var(--panel));
 }
@@ -268,6 +268,22 @@ code,.mono{font-family:var(--mono)}
 .blk .t{font-size:12px;font-weight:700;overflow:hidden;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .blk .s{display:block;font-size:10px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 30분짜리는 두 줄이 안 들어간다. 시각과 제목을 한 줄에 눕혀 제목을 살린다. */
+.blk--tight{display:flex;align-items:baseline;gap:5px;padding:2px 6px;line-height:1.4}
+.blk--tight .k{flex:none}
+.blk--tight .t{display:block;font-size:11px;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 서포터즈 일정. 수업·근로가 '주어진 시간'이라면 이쪽은 '내가 맡은 일' — 더 진하게. */
+.blk--ev{
+  border:1px solid var(--c,var(--ink-3));border-left-width:3px;
+  background:color-mix(in srgb,var(--c,var(--ink-3)) 26%,var(--panel));
+}
+.blk--ev .t{font-weight:800}
+.blk--ev.flag{border-color:var(--warn);border-left-color:var(--warn)}
+.blk--ev.flag .k{color:var(--warn)}
+.blk--ev.is-done{opacity:.55}
+.blk--ev.is-done .t{text-decoration:line-through}
 .blk--alba{
   background:var(--panel-2);border:1px solid var(--line-2);border-left:3px solid var(--line-2);
   background-image:repeating-linear-gradient(45deg,transparent 0 5px,var(--hatch) 5px 10px);
@@ -394,7 +410,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 /* ═══ 폼 ══════════════════════════════════════════════════════════ */
 .form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--gap);margin-bottom:var(--gap);align-items:end}
 .f{display:flex;flex-direction:column;gap:6px;min-width:0}
-.f label{font-size:12px;color:var(--ink-3)}
+.f label{font-size:12px;color:var(--ink-2)}
 .f input,.f select{
   font-family:inherit;font-size:15px;color:var(--ink);background:var(--panel-2);
   border:1px solid var(--line-2);border-radius:var(--radius-sm);
@@ -440,7 +456,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 footer{border-top:1px solid var(--line);padding:var(--gap-lg) 0;color:var(--ink-2)}
 footer .inner{font-size:13px}
 footer p{margin:0 0 6px}
-footer .legal{color:var(--ink-3);font-size:12px}
+footer .legal{color:var(--ink-2);font-size:12px}
 footer code{font-family:var(--mono)}
 
 /* ═══ 푸터 구독 안내 ══════════════════════════════════════════════ */
@@ -448,11 +464,26 @@ footer code{font-family:var(--mono)}
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
   padding:var(--gap);margin-bottom:var(--gap)}
 .sub-m{flex:1;min-width:240px}
-.sub-m b{display:block;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.sub-m > b{display:block;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.sub-m p b{font-weight:700;color:var(--ink)}
 .sub-m p{margin:0 0 10px;font-size:13px;color:var(--ink-2);line-height:1.6}
 .sub-m code{display:block;font-family:var(--mono);font-size:12px;color:var(--accent-ink);
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);
   padding:10px 12px;overflow-wrap:anywhere}
+
+.feeds{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.feed{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;min-width:0}
+.feed .fl{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);font-weight:700;
+  white-space:nowrap}
+.feed .sw{width:12px;height:12px;border-radius:3px;background:var(--c);flex:none}
+.feed code{min-width:0}
+/* 폰: 이름과 버튼을 한 줄에, 주소는 그 아래 전체 폭으로 */
+@media (max-width:640px){
+  .feed{grid-template-columns:1fr auto;grid-template-areas:"name btn" "url url"}
+  .feed .fl{grid-area:name}
+  .feed .btn{grid-area:btn}
+  .feed code{grid-area:url}
+}
 
 /* ═══ 움직임 — 값이 바뀌는 것만 ═══════════════════════════════════
    등장은 제자리에서. 이동·확대는 쓰지 않는다. */
@@ -701,11 +732,13 @@ body.booted main > .sec{animation:appear .5s ease both}
       <div class="sub-m">
         <b>아이폰 캘린더에 붙이기</b>
         <p>설정 → 앱 → 캘린더 → 계정 → 계정 추가 → 기타 → <b>구독 캘린더 추가</b> 에
-           아래 주소를 넣으면, 여기서 추가한 일정이 기본 캘린더에 그대로 뜹니다.
+           주소를 넣으면, 여기서 추가한 일정이 기본 캘린더에 그대로 뜹니다.
            마감은 D-7·D-3·D-1 에 알림이 옵니다.</p>
-        <code id="ics-url">…</code>
+        <p>아이폰은 <b>구독 캘린더 하나에 색 하나</b>만 줍니다. 종류별로 색을 갈라 보려면
+           아래 셋을 각각 구독한 뒤, 캘린더 앱에서 각 캘린더의 색을 지정하세요.
+           하나만 구독할 거면 <b>전체</b>를 쓰고, 제목 앞 🎓💼🛵⏰📍 표식으로 구분하면 됩니다.</p>
+        <ul class="feeds" id="feeds"></ul>
       </div>
-      <button class="btn btn--quiet" type="button" id="ics-copy">주소 복사</button>
     </div>
     <p class="legal">읽기·쓰기 모두 anon 키 + RLS 로 동작합니다. 개인용이라 링크를 공유하지 않는 것을 전제로 합니다.</p>
   </div>
@@ -717,6 +750,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // CLI 와 같은 규칙 파서를 쓴다. 브라우저에서는 claude 서브프로세스를 못 돌리므로
 // 여기서는 규칙 기반으로 읽고, 더 정교한 파싱이 필요하면 CLI 가 나중에 손본다.
 import { fallbackParse } from './lib/parse-rules.mjs';
+import { packColumns } from './lib/layout.mjs';
 
 // anon 키는 RLS 로 보호된다 — 읽기 + sp_item 체크오프 + sp_output 기록만 가능.
 const SUPABASE_URL = 'https://rlisxmxytrvapkgcqkgf.supabase.co';
@@ -902,6 +936,8 @@ function loadSchedule(sched) {
 }
 
 const fixedOn = (d) => S.fixed.filter((b) => b.day === d).sort((a, b) => toMin(a.start) - toMin(b.start));
+/** 끝 시각이 없는 일정이 그리드에서 차지할 길이(분). ics.mjs 의 defaultMinutes 와 같은 기준. */
+const evMinutes = (kind) => (kind === '회의' || kind === '행사' ? 60 : 30);
 /** 23:59 나 종일 항목은 '시각'이 아니라 '그날 마감'이다 → 그리드가 아니라 위 띠에 둔다. */
 const isDeadline = (it) => it.all_day || hm(it.due_at) === '23:59';
 
@@ -933,15 +969,16 @@ function renderWeek() {
     `<div class="cal-dow${d === today ? ' today' : ''}${d < today ? ' past' : ''}">
       <span class="w">${dowOf(n)}</span><span class="n">${Number(d.slice(8))}</span></div>`).join('');
 
-  // 서포터즈 일정은 그리드에 겹쳐 놓으면 칸이 좁아 제목이 잘린다.
-  // 고정 시간표는 아래 그리드, 서포터즈 일정은 이 띠에 따로 모은다.
+  // 시각이 있는 일정은 아래 그리드에 그 시각으로 놓는다.
+  // 이 띠에는 '그날 안에'만 지키면 되는 것 — 종일·23:59 마감 — 만 남긴다.
   const dueCells = days.map((d) => {
     const pins = itemsOn(d)
+      .filter(isDeadline)
       .slice()
-      .sort((a, b) => (isDeadline(a) - isDeadline(b)) || (a.due_at < b.due_at ? -1 : 1))
+      .sort((a, b) => (a.due_at < b.due_at ? -1 : 1))
       .map((it) => {
         const act = S.byId.get(it.activity_id);
-        const when = isDeadline(it) ? '마감' : hm(it.due_at);
+        const when = '마감';
         return `<span class="pin${it.conflict ? ' flag' : ''}${it.done ? ' is-done' : ''}"
           style="--c:${colorOf(act)}"
           title="${esc(when)} · ${esc(act?.name ?? '')} — ${esc(it.title)}${it.conflict && it.conflict_why ? ' (' + esc(it.conflict_why) + ')' : ''}">
@@ -961,14 +998,52 @@ function renderWeek() {
 
   const cols = days.map((d, n) => {
     const wd = dowOf(n);
-    const blocks = fixedOn(wd).map((b) => {
-      const t = top(toMin(b.start)), h = Math.max(20, ((toMin(b.end) - toMin(b.start)) / 60) * PX - 2);
-      const cls = b.alba ? 'blk blk--alba' : 'blk';
-      return `<div class="${cls}" style="--c:${b.color ?? 'var(--ink-48)'};top:${t}px;height:${h}px"
-        title="${esc(b.label)} ${b.start}–${b.end}${b.sub ? ' · ' + esc(b.sub) : ''}">
-        <span class="k">${b.start}–${b.end} · ${b.kind}</span>
-        <span class="t">${esc(b.label)}</span>
-        ${b.sub && h > 52 ? `<span class="s">${esc(b.sub)}</span>` : ''}</div>`;
+
+    // 고정 시간표와 서포터즈 일정을 한 배열에 모아 같이 배치한다.
+    // 안 겹치면 칸을 다 쓰고, 겹치는 것끼리만 폭을 나눈다 — 그래야 서로 안 가린다.
+    const laid = [
+      ...fixedOn(wd).map((b) => ({
+        start: toMin(b.start), end: toMin(b.end), fixed: b,
+      })),
+      ...itemsOn(d).filter((it) => !isDeadline(it)).map((it) => {
+        const s0 = toMin(hm(it.due_at));
+        const s1 = it.due_end ? toMin(hm(it.due_end)) : s0 + evMinutes(it.kind);
+        return { start: s0, end: Math.max(s0 + 20, s1), item: it };
+      }),
+    ];
+    const slots = packColumns(laid);
+
+    const blocks = laid.map((x, i) => {
+      const { col, cols: cn } = slots[i];
+      const t = top(x.start), h = Math.max(20, ((x.end - x.start) / 60) * PX - 2);
+      const place = `top:${t}px;height:${h}px;`
+        + `left:calc(${((col / cn) * 100).toFixed(4)}% + 3px);`
+        + `width:calc(${(100 / cn).toFixed(4)}% - 6px)`;
+      const wide = cn === 1;
+      // 30분짜리 블록은 두 줄이 안 들어가 제목이 잘린다 → 시각과 제목을 한 줄로 눕힌다.
+      const tight = h < 38;
+      const cls0 = tight ? 'blk blk--tight' : 'blk';
+
+      if (x.fixed) {
+        const b = x.fixed;
+        return `<div class="${cls0}${b.alba ? ' blk--alba' : ''}"
+          style="--c:${b.color ?? 'var(--ink-48)'};${place}"
+          title="${esc(b.label)} ${b.start}–${b.end}${b.sub ? ' · ' + esc(b.sub) : ''}">
+          ${tight && !wide ? '' : `<span class="k">${wide ? `${b.start}–${b.end} · ` : ''}${b.kind}</span>`}
+          <span class="t">${esc(b.label)}</span>
+          ${b.sub && wide && h > 52 ? `<span class="s">${esc(b.sub)}</span>` : ''}</div>`;
+      }
+
+      const it = x.item, act = S.byId.get(it.activity_id);
+      const cls = [cls0, 'blk--ev', it.conflict ? 'flag' : '', it.done ? 'is-done' : '']
+        .filter(Boolean).join(' ');
+      // 좁고 짧은 칸에서는 시각을 뺀다 — 블록이 놓인 높이가 이미 시각을 말해준다.
+      const showK = !(tight && !wide) || it.conflict;
+      return `<div class="${cls}" style="--c:${colorOf(act)};${place}"
+        title="${esc(hm(it.due_at))} · ${esc(act?.name ?? '')} — ${esc(it.title)}${it.conflict && it.conflict_why ? ' (' + esc(it.conflict_why) + ')' : ''}">
+        ${showK ? `<span class="k">${tight && !wide ? '⚠' : esc(hm(it.due_at)) + (it.conflict ? ' ⚠' : '')}</span>` : ''}
+        <span class="t">${esc(it.title)}</span>
+        ${wide && h > 52 && act ? `<span class="s">${esc(act.name)}</span>` : ''}</div>`;
     }).join('');
 
     return `<div class="cal-col${d === today ? ' today' : ''}${d < today ? ' past' : ''}"
@@ -1007,7 +1082,7 @@ function renderWeek() {
   document.getElementById('week').innerHTML = `
     <div class="cal">
       <div class="cal-row cal-head"><div class="cal-gut"></div>${headCells}</div>
-      <div class="cal-row cal-due"><div class="cal-gut">서포터즈</div>${dueCells}</div>
+      <div class="cal-row cal-due"><div class="cal-gut">마감</div>${dueCells}</div>
       <div class="cal-row cal-grid">
         <div class="cal-times" style="--h:${H}px">${hours.join('')}</div>${cols}${lines.join('')}
       </div>
@@ -1546,18 +1621,33 @@ document.getElementById('cap-text').addEventListener('keydown', (e) => {
 
 // ── 아이폰 구독 주소 ────────────────────────────────────────────
 (() => {
-  const el = document.getElementById('ics-url');
-  const btn = document.getElementById('ics-copy');
-  if (!el || !btn) return;
-  const url = new URL('calendar.ics', location.href).href;
-  el.textContent = url;
-  btn.addEventListener('click', async () => {
+  const box = document.getElementById('feeds');
+  if (!box) return;
+  // functions/calendar.ics.js 의 FEEDS 와 같은 이름·색을 쓴다.
+  const FEEDS = [
+    { q: '',           label: '전체',      color: '#F5A524' },
+    { q: 'class',      label: '수업',      color: '#3478F6' },
+    { q: 'work',       label: '근로·알바', color: '#30A46C' },
+    { q: 'supporters', label: '서포터즈',  color: '#F5A524' },
+  ];
+  const urlOf = (q) => new URL(`calendar.ics${q ? `?only=${q}` : ''}`, location.href).href;
+
+  box.innerHTML = FEEDS.map((f) => `<li class="feed">
+    <span class="fl"><span class="sw" style="--c:${f.color}"></span>${f.label}</span>
+    <code>${urlOf(f.q)}</code>
+    <button class="btn btn--quiet" type="button" data-q="${f.q}">복사</button></li>`).join('');
+
+  box.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-q]');
+    if (!btn) return;
+    const url = urlOf(btn.dataset.q);
     try {
       await navigator.clipboard.writeText(url);
       toast('주소를 복사했습니다');
     } catch {
       // 클립보드가 막힌 브라우저 — 직접 고르게 해 준다
-      const r = document.createRange(); r.selectNodeContents(el);
+      const code = btn.closest('.feed').querySelector('code');
+      const r = document.createRange(); r.selectNodeContents(code);
       const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
       toast('복사가 막혀 있어 주소를 선택했습니다. ⌘/Ctrl+C 를 누르세요.');
     }

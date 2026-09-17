@@ -7,6 +7,39 @@ import { buildCalendar } from '../public/lib/ics.mjs';
 import { rest, SUPABASE_URL, SUPABASE_ANON_KEY } from '../public/lib/config.mjs';
 
 /**
+ * 피드 분리.
+ * 아이폰 구독 캘린더는 캘린더 하나에 색 하나만 준다. 종류별로 색을 다르게 보려면
+ * 피드를 나눠서 각각 구독하는 수밖에 없다. ?only= 로 고른다.
+ */
+const FEEDS = {
+  class:      { name: 'zun 수업',     color: '#3478F6', fixed: ['수업'],        items: false },
+  work:       { name: 'zun 근로·알바', color: '#30A46C', fixed: ['근로', '알바'], items: false },
+  supporters: { name: 'zun 서포터즈',  color: '#F5A524', fixed: [],             items: true },
+};
+const ALL = { key: 'all', name: 'zun', color: '#F5A524', fixed: null, items: true }; // fixed:null = 전부
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/**
+ * HTTP 헤더 값은 latin-1 만 담을 수 있다. 한글이 섞이면 Response 생성이 통째로 터진다.
+ * 진단용 헤더 하나 때문에 캘린더가 안 나가는 일이 없도록 여기서 걸러 낸다.
+ */
+const hdr = (v) => String(v ?? '').replace(/[^\x20-\x7E]/g, '?').slice(0, 200);
+
+/** ?only= 값을 피드 정의로 바꾼다. 활동 slug 를 주면 그 활동만 담은 피드가 된다. */
+function feedFor(only, activities) {
+  if (!only) return ALL;
+  if (FEEDS[only]) return { key: only, ...FEEDS[only] };
+  const act = activities.find((a) => a.slug === only);
+  if (act) return {
+    key: `act:${act.slug}`,
+    name: `zun ${act.name}`, color: HEX.test(act.color ?? '') ? act.color : '#F5A524',
+    fixed: [], items: true, activityId: act.id,
+  };
+  return ALL;                                  // 모르는 값이면 전체 — 구독이 빈 채로 남지 않게
+}
+
+/**
  * schedule.json 을 같은 배포본에서 읽어 고정 일정을 평탄화한다.
  * Worker 가 자기 호스트로 fetch 하면 실패한다 — 정적 자산은 ASSETS 바인딩으로 읽는다.
  */
@@ -47,14 +80,23 @@ export async function onRequestGet({ request, env }) {
       rest('sp_item?select=*&order=due_at.asc', cfg),
     ]);
 
-    const withSchedule = opt('schedule') !== '0';
+    const only = opt('only');
+    const feed = feedFor(only, activities);
+
+    const withSchedule = opt('schedule') !== '0' && feed.fixed?.length !== 0;
     const { blocks, termEnd, why } = withSchedule
       ? await fixedBlocks(url.origin, env) : { blocks: [], termEnd: null, why: null };
 
+    const fixed = feed.fixed ? blocks.filter((b) => feed.fixed.includes(b.kind)) : blocks;
+    let rows = feed.items ? items : [];
+    if (feed.activityId) rows = rows.filter((it) => it.activity_id === feed.activityId);
+
     const ics = buildCalendar({
-      items, activities,
-      fixed: blocks,
-      name: opt('name') || 'zun',
+      items: rows, activities,
+      fixed,
+      name: opt('name') || feed.name,
+      color: feed.color,
+      marks: opt('marks') !== '0',
       termEnd,
       weeks: 16,
       alarms: opt('alarms') !== '0',
@@ -68,9 +110,10 @@ export async function onRequestGet({ request, env }) {
         'Cache-Control': 'public, max-age=300',
         'Access-Control-Allow-Origin': '*',
         // 조용히 비는 일이 없도록 진단값을 남긴다
-        'X-Zun-Items': String(items.length),
-        'X-Zun-Fixed': String(blocks.length),
-        ...(why ? { 'X-Zun-Schedule-Error': why } : {}),
+        'X-Zun-Feed': hdr(feed.key),
+        'X-Zun-Items': String(rows.length),
+        'X-Zun-Fixed': String(fixed.length),
+        ...(why ? { 'X-Zun-Schedule-Error': hdr(why) } : {}),
       },
     });
   } catch (e) {
@@ -85,7 +128,7 @@ export async function onRequestGet({ request, env }) {
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
         'Cache-Control': 'no-store',
-        'X-Zun-Error': String(e?.message ?? e).slice(0, 200),
+        'X-Zun-Error': hdr(e?.message ?? e),
       },
     });
   }
