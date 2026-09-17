@@ -279,7 +279,7 @@ button{font-family:inherit}
 .legend .hatch{background-image:repeating-linear-gradient(45deg,transparent 0 3px,var(--alba-line) 3px 6px);border:1px solid var(--field-line)}
 
 .cal{border:1px solid var(--hairline);border-radius:var(--r-lg);overflow:hidden;background:var(--canvas)}
-.cal-row{display:grid;grid-template-columns:54px repeat(7,1fr)}
+.cal-row{display:grid;grid-template-columns:62px repeat(7,1fr)}
 .cal-head{border-bottom:1px solid var(--hairline);background:var(--parchment)}
 .cal-dow{padding:10px 8px;text-align:center;border-left:1px solid var(--divider-soft)}
 .cal-dow .w{display:block;font-size:12px;line-height:1;letter-spacing:-.12px;color:var(--ink-48);margin-bottom:4px}
@@ -287,18 +287,28 @@ button{font-family:inherit}
 .cal-dow.today{background:var(--accent-fill);border-left-color:var(--accent-fill)}
 .cal-dow.today .w,.cal-dow.today .n{color:#fff}
 .cal-dow.past{opacity:.45}
-.cal-gut{padding:8px;font-size:11px;line-height:1;letter-spacing:-.12px;color:var(--ink-48);text-align:right}
+.cal-gut{padding:8px 8px 8px 4px;font-size:10.5px;line-height:1.2;letter-spacing:-.12px;
+  color:var(--ink-48);text-align:right;white-space:nowrap}
 
-.cal-due{border-bottom:1px solid var(--hairline)}
-.cal-duecell{border-left:1px solid var(--divider-soft);padding:6px 5px;min-height:38px;display:flex;flex-direction:column;gap:4px}
+.cal-due{border-bottom:1px solid var(--hairline);background:var(--canvas)}
+.cal-duecell{
+  border-left:1px solid var(--divider-soft);padding:8px 7px;min-height:44px;
+  display:flex;flex-direction:column;gap:6px;min-width:0;
+}
 .cal-duecell.today{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 .pin{
-  display:block;font-size:11px;line-height:1.25;letter-spacing:-.12px;
-  border-left:3px solid var(--c,var(--ink-48));padding:1px 0 1px 6px;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  display:block;min-width:0;font-size:11.5px;line-height:1.3;letter-spacing:-.12px;
+  border-left:3px solid var(--c,var(--ink-48));padding:2px 0 2px 7px;
 }
-.pin.flag{color:var(--flag)}
+.pin b{display:block;font-weight:400;font-size:10px;line-height:1.3;letter-spacing:-.08px;
+  color:var(--ink-48);font-variant-numeric:tabular-nums}
+.pin .pt{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.pin.flag{border-left-color:var(--flag)}
+.pin.flag b{color:var(--flag)}
 .pin.is-done{color:var(--ink-48);text-decoration:line-through}
+.pin-none{font-size:11px;line-height:1;color:var(--ink-48);opacity:.5}
 
 .cal-grid{position:relative;padding-bottom:14px}
 .cal-col{position:relative;border-left:1px solid var(--divider-soft);height:var(--h)}
@@ -309,7 +319,7 @@ button{font-family:inherit}
   position:absolute;left:0;right:6px;text-align:right;transform:translateY(-6px);
   font-size:11px;line-height:1;letter-spacing:-.12px;color:var(--ink-48);font-variant-numeric:tabular-nums;
 }
-.cal-line{position:absolute;left:54px;right:0;border-top:1px solid var(--divider-soft);pointer-events:none}
+.cal-line{position:absolute;left:62px;right:0;border-top:1px solid var(--divider-soft);pointer-events:none}
 
 .blk{
   position:absolute;left:3px;right:3px;border-radius:6px;padding:4px 6px;overflow:hidden;
@@ -327,12 +337,6 @@ button{font-family:inherit}
   background-image:repeating-linear-gradient(45deg,transparent 0 5px,var(--alba-line) 5px 10px);
   border:1px dashed var(--field-line);border-left:3px solid var(--ink-48);
 }
-.blk--ev{
-  left:38%;background:var(--canvas);border:1px solid var(--hairline);
-  border-left:3px solid var(--c,var(--ink-48));z-index:2;
-}
-.blk--ev.flag{border-color:var(--flag);border-left-color:var(--flag)}
-.blk--ev.is-done{opacity:.5}
 .no-time{margin-top:12px;font-size:12px;line-height:1.4;letter-spacing:-.12px;color:var(--ink-48)}
 
 /* 폰: 그리드 대신 요일별 스택 */
@@ -535,9 +539,9 @@ body.booted #week,body.booted #due,body.booted #acts{animation:fade .4s ease bot
 @media (max-width:1068px){
   .tile-head h2{font-size:34px;letter-spacing:-.374px}
   .acts{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
-  .cal-row{grid-template-columns:46px repeat(7,1fr)}
+  .cal-row{grid-template-columns:54px repeat(7,1fr)}
+  .cal-line{left:54px}
   .blk .t{font-size:11px}
-  .blk--ev{left:30%}
 }
 /* 7열 시간 그리드는 이 아래로 가면 과목명이 읽히지 않는다 → 요일 스택 */
 @media (max-width:1023px){
@@ -799,7 +803,7 @@ const md = (s) => s.slice(5).replace('-', '/');
 
 // ── 상태 ────────────────────────────────────────────────────────
 const S = { activities: [], items: [], outputs: [], byId: new Map(), filter: 'all', range: 30, loaded: false,
-            fixed: [], noTime: [], semester: null };
+            fixed: [], online: [], semester: null };
 
 // ── 테마 ────────────────────────────────────────────────────────
 const themeBtns = [document.getElementById('theme'), document.getElementById('theme-side')].filter(Boolean);
@@ -939,10 +943,10 @@ const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h *
 const pad2 = (n) => String(n).padStart(2, '0');
 
 function loadSchedule(sched) {
-  S.fixed = []; S.noTime = []; S.semester = sched?.semester ?? null;
+  S.fixed = []; S.online = []; S.semester = sched?.semester ?? null;
   if (!sched) return;
   for (const c of sched.classes ?? []) {
-    if (!(c.slots ?? []).length) { S.noTime.push(c.name); continue; }
+    if (c.online || !(c.slots ?? []).length) { S.online.push(c.name); continue; }
     for (const sl of c.slots)
       S.fixed.push({ ...sl, kind: '수업', label: c.name, color: c.color,
         sub: [c.prof, c.room].filter(Boolean).join(' · ') || null });
@@ -974,11 +978,6 @@ function renderWeek() {
   // 그리드 시간 범위: 고정 일정과 시각이 있는 일정을 모두 담되 08–23시로 자른다
   let lo = 9 * 60, hi = 18 * 60;
   for (const b of S.fixed) { lo = Math.min(lo, toMin(b.start)); hi = Math.max(hi, toMin(b.end)); }
-  for (const d of days) for (const it of itemsOn(d)) {
-    if (isDeadline(it)) continue;
-    const t = toMin(hm(it.due_at));
-    lo = Math.min(lo, t); hi = Math.max(hi, t + 60);
-  }
   lo = Math.max(8 * 60, Math.floor(lo / 60) * 60);
   hi = Math.min(23 * 60, Math.ceil(hi / 60) * 60);
   const PX = 46, H = ((hi - lo) / 60) * PX;
@@ -991,13 +990,21 @@ function renderWeek() {
     `<div class="cal-dow${d === today ? ' today' : ''}${d < today ? ' past' : ''}">
       <span class="w">${dowOf(n)}</span><span class="n">${Number(d.slice(8))}</span></div>`).join('');
 
+  // 서포터즈 일정은 그리드에 겹쳐 놓으면 칸이 좁아 제목이 잘린다.
+  // 고정 시간표는 아래 그리드, 서포터즈 일정은 이 띠에 따로 모은다.
   const dueCells = days.map((d) => {
-    const pins = itemsOn(d).filter(isDeadline).map((it) => {
-      const act = S.byId.get(it.activity_id);
-      return `<span class="pin${it.conflict ? ' flag' : ''}${it.done ? ' is-done' : ''}"
-        style="--c:${colorOf(act)}" title="${esc(it.title)}">${esc(it.title)}</span>`;
-    }).join('');
-    return `<div class="cal-duecell${d === today ? ' today' : ''}">${pins}</div>`;
+    const pins = itemsOn(d)
+      .slice()
+      .sort((a, b) => (isDeadline(a) - isDeadline(b)) || (a.due_at < b.due_at ? -1 : 1))
+      .map((it) => {
+        const act = S.byId.get(it.activity_id);
+        const when = isDeadline(it) ? '마감' : hm(it.due_at);
+        return `<span class="pin${it.conflict ? ' flag' : ''}${it.done ? ' is-done' : ''}"
+          style="--c:${colorOf(act)}"
+          title="${esc(when)} · ${esc(act?.name ?? '')} — ${esc(it.title)}${it.conflict && it.conflict_why ? ' (' + esc(it.conflict_why) + ')' : ''}">
+          <b>${esc(when)}</b><span class="pt">${esc(it.title)}</span></span>`;
+      }).join('');
+    return `<div class="cal-duecell${d === today ? ' today' : ''}">${pins || '<span class="pin-none">—</span>'}</div>`;
   }).join('');
 
   const hours = [];
@@ -1020,18 +1027,8 @@ function renderWeek() {
         ${b.sub && h > 52 ? `<span class="s">${esc(b.sub)}</span>` : ''}</div>`;
     }).join('');
 
-    const evs = itemsOn(d).filter((it) => !isDeadline(it)).map((it) => {
-      const act = S.byId.get(it.activity_id);
-      const t = top(toMin(hm(it.due_at)));
-      return `<div class="blk blk--ev${it.conflict ? ' flag' : ''}${it.done ? ' is-done' : ''}"
-        style="--c:${colorOf(act)};top:${t}px;height:50px"
-        title="${esc(it.title)}${it.conflict && it.conflict_why ? ' — ' + esc(it.conflict_why) : ''}">
-        <span class="k">${esc(hm(it.due_at))} · ${esc(act?.name ?? '')}</span>
-        <span class="t">${esc(it.title)}</span></div>`;
-    }).join('');
-
     return `<div class="cal-col${d === today ? ' today' : ''}${d < today ? ' past' : ''}"
-      style="--h:${H}px">${blocks}${evs}</div>`;
+      style="--h:${H}px">${blocks}</div>`;
   }).join('');
 
   // ── 폰: 요일별 스택 ──
@@ -1066,13 +1063,13 @@ function renderWeek() {
   document.getElementById('week').innerHTML = `
     <div class="cal">
       <div class="cal-row cal-head"><div class="cal-gut"></div>${headCells}</div>
-      <div class="cal-row cal-due"><div class="cal-gut">마감</div>${dueCells}</div>
+      <div class="cal-row cal-due"><div class="cal-gut">서포터즈</div>${dueCells}</div>
       <div class="cal-row cal-grid">
         <div class="cal-times" style="--h:${H}px">${hours.join('')}</div>${cols}${lines.join('')}
       </div>
     </div>
     <div class="days">${stack}</div>
-    ${S.noTime.length ? `<p class="no-time">시간 미지정: ${S.noTime.map(esc).join(', ')}</p>` : ''}`;
+    ${S.online.length ? `<p class="no-time">온라인 · 아무 때나 수강: ${S.online.map(esc).join(', ')}</p>` : ''}`;
 }
 
 function renderLegend() {

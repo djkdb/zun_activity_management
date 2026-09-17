@@ -77,7 +77,9 @@ export function scheduleText() {
     lines.push(`- ${day}: ` + bs.map((b) =>
       `${b.start}–${b.end} ${b.kind === '수업' ? b.label : b.label}`).join(', '));
   }
-  const noTime = (s.classes ?? []).filter((c) => !(c.slots ?? []).length).map((c) => c.name);
-  if (noTime.length) lines.push(`- 시간 미지정 과목: ${noTime.join(', ')}`);
+  // 온라인 과목은 정해진 시간이 없다 — 빠진 정보가 아니므로 그렇게 밝힌다.
+  const online = (s.classes ?? []).filter((c) => c.online || !(c.slots ?? []).length).map((c) => c.name);
+  if (online.length)
+    lines.push(`- 온라인 과목(정해진 시간 없이 아무 때나 수강): ${online.join(', ')} — 일정 충돌 대상이 아니다.`);
   return lines.join('\n');
 }
