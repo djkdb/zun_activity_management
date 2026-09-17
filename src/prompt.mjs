@@ -1,5 +1,6 @@
 // 파싱 프롬프트 템플릿. 오늘 날짜(Asia/Seoul)와 기존 활동 목록을 반드시 주입한다.
 import { seoulYMD, seoulDow } from './render.mjs';
+import { scheduleText } from './schedule.mjs';
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -34,6 +35,7 @@ const SCHEMA = `{
 
 export function buildPrompt({ rawText, activities = [], activityHint = null, now = new Date() }) {
   const wk = weekContext(now);
+  const sched = `## 고정 주간 일정 (매주 반복 — 이 시간에는 다른 일정을 잡기 어렵다)\n${scheduleText()}`;
 
   const known = activities.length
     ? activities.map((a) =>
@@ -71,7 +73,10 @@ ${SCHEMA}
 4. 기간형 일정(예: "9/14~9/20 콘텐츠 주간")은 \`all_day: true\` 로 두고 \`due_at\` 에 시작일, \`due_end\` 에 종료일을 넣는다.
 5. 주차별 반복 일정표(예: "W1 9/14–9/20, W2 9/21–9/27 …")가 나오면 각 주차를 **개별 item 으로 전개**한다. 하나로 묶지 마라.
 6. 원문에 없는 날짜·조건을 지어내지 마라. 날짜가 불확실하면 \`due_at\` 을 \`null\` 로 두고 \`notes\` 에 무엇이 불확실한지 적는다.
-7. 고정 제약: **수요일·금요일 17–22시는 아르바이트**다. 마감이나 회의가 수/금 17–22시에 걸리면 \`conflict_why\` 에 그 이유를 한 줄로 적는다 (예: "수 19:00 회의 — 알바 시간과 겹침"). 겹치지 않으면 \`null\`.
+7. 아래 **고정 주간 일정**과 겹치는 일정에는 \`conflict_why\` 에 이유를 한 줄로 적는다 (예: "목 19:00 회의 — 배달전문점 알바와 겹침"). 겹치지 않으면 \`null\`. 알바 > 수업 > 근로 순으로 피하기 어려운 제약이다.
+
+${sched}
+
 8. \`kind\` 는 마감 | 회의 | 제출 | 업로드 | 안내 | 행사 중 하나.
 9. \`stage\` 는 기획 | 제작 | 시안제출 | 피드백대기 | 업로드 | 완료 중 하나. 판단이 어려우면 "기획".
 10. \`status\` 는 진행중 | 시작예정 | 검토중 | 종료 중 하나.

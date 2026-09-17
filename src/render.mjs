@@ -104,15 +104,6 @@ export function fmtDue(due, allDay = false) {
   return allDay ? base : `${base} ${seoulHM(due)}`;
 }
 
-/** 수·금 17–22시 알바와 겹치는지 */
-export function hitsAlba(due) {
-  if (!due) return false;
-  const dow = seoulDow(due);
-  if (dow !== '수' && dow !== '금') return false;
-  const h = Number(seoulHM(due).slice(0, 2));
-  return h >= 17 && h <= 22;
-}
-
 export const ok = (s) => `${A.green}✓${A.reset} ${s}`;
 export const warn = (s) => `${A.yellow}!${A.reset} ${s}`;
 export const err = (s) => `${A.red}✗${A.reset} ${s}`;

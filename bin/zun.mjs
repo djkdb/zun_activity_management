@@ -10,9 +10,10 @@ import { db, listActivities, listUpcoming, searchItems, itemsOnDate, ConfigError
 import { buildPrompt } from '../src/prompt.mjs';
 import { parseWithClaude, ClaudeMissingError, ClaudeRunError, JsonExtractError, normalize } from '../src/parse.mjs';
 import {
-  A, hex, table, fmtDue, ddayLabel, dday, seoulYMD, seoulDow, hitsAlba,
+  A, hex, table, fmtDue, ddayLabel, dday, seoulYMD, seoulDow,
   truncate, ok, warn, err,
 } from '../src/render.mjs';
+import { conflictReason, byDay, scheduleText } from '../src/schedule.mjs';
 
 // ── 인터랙션 ──────────────────────────────────────────────────────────
 let _rl = null;
@@ -111,8 +112,7 @@ function previewParsed(parsed, actBySlug) {
         const act = actBySlug.get(i.activity_slug);
         const label = act ? act.name : (i.activity_slug ?? '?');
         const c = act ? hex(act.color) : A.gray;
-        const alba = hitsAlba(i.due_at);
-        const why = i.conflict_why || (alba ? '알바 시간대(수·금 17–22시)' : '');
+        const why = i.conflict_why || conflictReason(i.due_at, i.all_day) || '';
         return [
           `${c}${truncate(label, 20)}${A.reset}`,
           truncate(i.title, 30),
@@ -191,8 +191,7 @@ async function persist(parsed, { rawText, source, assumeYes }) {
       }
     }
 
-    const alba = hitsAlba(i.due_at);
-    const why = i.conflict_why || (alba ? '알바 시간대(수·금 17–22시)와 겹침' : null);
+    const why = i.conflict_why || conflictReason(i.due_at, i.all_day);
     rows.push({
       activity_id, title: i.title, kind: i.kind, due_at: i.due_at, due_end: i.due_end,
       all_day: i.all_day, stage: i.stage, required: i.required,
@@ -328,10 +327,14 @@ async function cmdLs(opts) {
       curDate = d;
       const isToday = d === today;
       const dow = seoulDow(i.due_at);
-      const albaDay = dow === '수' || dow === '금';
+      const fixed = byDay(dow);
+      const alba = fixed.filter((b) => b.kind === '알바')
+        .map((b) => `${b.start}–${b.end} ${b.label}`).join(', ');
+      const cls = fixed.filter((b) => b.kind !== '알바').length;
       const head = `${d} (${dow})  ${ddayLabel(i.due_at)}`;
       console.log(`${isToday ? A.bold + A.green : A.bold}${head}${A.reset}` +
-        (albaDay ? ` ${A.gray}· 알바 17–22시${A.reset}` : ''));
+        (alba ? ` ${A.gray}· ${alba}${A.reset}` : '') +
+        (cls ? ` ${A.gray}· 고정 ${cls}건${A.reset}` : ''));
     }
     const act = i.activity;
     const c = act ? hex(act.color) : A.gray;
