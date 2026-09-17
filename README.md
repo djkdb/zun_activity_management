@@ -193,21 +193,52 @@ npm run serve     # http://localhost:5173
 
 ## 4. Cloudflare Pages 배포
 
-1. 이 저장소를 GitHub (`djkdb`) 에 올린다.
-2. Cloudflare 대시보드 → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
-3. GitHub 계정을 연결하고 이 저장소를 선택한다.
-4. 빌드 설정:
-   - **Framework preset**: `None`
-   - **Build command**: *(비워둠)*
-   - **Build output directory**: `public`
-5. **Save and Deploy**.
-6. 배포된 주소(`https://<프로젝트>.pages.dev`)를 `.env` 의 `ZUN_DASHBOARD_URL` 에 넣으면
-   `zun open` 으로 바로 열 수 있다.
+정적 파일 + Pages Function 하나로 돌아간다. **빌드 스텝이 없다.**
 
-이후 `main` 에 푸시할 때마다 자동 재배포된다. 환경변수 설정은 필요 없다 —
-anon 키가 HTML 안에 들어 있고, 그게 의도된 구조다.
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages**
+   (계정에 따라 **Compute** 아래)
+2. **Create application** → **Pages** → **Connect to Git**
+3. `djkdb/zun_activity_management` 선택
+4. 빌드 설정 — **여기가 중요하다**
 
----
+| 항목 | 값 |
+|---|---|
+| Production branch | `claude/lucid-euler-wqemr3` |
+| Framework preset | **None** |
+| Build command | **반드시 비워둔다** |
+| Build output directory | `public` |
+| Root directory | 비워둔다 (저장소 루트) |
+
+> `package.json` 이 있어서 Pages 가 Node 프로젝트로 감지하고 `npm run build` 를
+> 넣으려 할 수 있다. 이 프로젝트엔 `build` 스크립트가 없으므로 **비워야 한다.**
+
+5. 환경변수는 **넣지 않는다.** anon 키는 코드에 있고 그게 의도된 구조다.
+   (원하면 `SUPABASE_URL` · `SUPABASE_ANON_KEY` 를 넣어 덮어쓸 수는 있다)
+6. **Save and Deploy**
+
+### 배포되면 확인할 것
+
+```
+https://<프로젝트>.pages.dev              대시보드가 뜨는가
+https://<프로젝트>.pages.dev/calendar.ics  BEGIN:VCALENDAR 로 시작하는가
+```
+
+`/calendar.ics` 는 `functions/calendar.ics.js` 가 **요청마다 DB 를 읽어 만든다.**
+정적 파일이 아니다 — 웹에서 일정을 넣으면 아이폰이 다음 갱신 때 바로 받아간다.
+
+- `functions/` 는 저장소 루트에 있고 Pages 가 알아서 잡는다.
+- `public/_routes.json` 이 **`/calendar.ics` 만** Function 으로 보낸다.
+  나머지는 CDN 정적 서빙이라 빠르고 무료 한도도 덜 쓴다.
+- `public/_headers` 가 `.mjs` 와 `schedule.json` 의 Content-Type 을 지정한다.
+
+### 안 될 때
+
+| 증상 | 원인 |
+|---|---|
+| 화면이 하얗게 비어 있다 | `.mjs` 가 잘못된 Content-Type 으로 나간 것. `_headers` 가 배포됐는지 확인 |
+| `/calendar.ics` 가 404 | Build output directory 가 `public` 이 아니거나 `functions/` 가 안 올라간 것 |
+| 아이폰이 구독을 거부 | `Content-Type: text/calendar` 확인. `curl -I` 로 볼 수 있다 |
+| 일정이 안 보인다 | 화면의 에러 상자에 원인이 적힌다. Supabase 일시중지 여부부터 확인 |
 
 ## 5. Claude Code 안에서 쓰기
 
