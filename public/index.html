@@ -7,9 +7,11 @@
 <meta name="description" content="서포터즈·대외활동 일정과 산출물을 한눈에 보는 대시보드">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗓️</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<!-- Pretendard — SF Pro / Apple SD Gothic Neo 와 메트릭이 맞는 한글·라틴 단일 패밀리.
+     애플 기기에서는 아래 스택의 -apple-system 이 먼저 잡혀 진짜 SF Pro 가 쓰인다. -->
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* ═══ 라이트 토큰 — 전부 여기서 정의 ═══════════════════════════════ */
 :root{
@@ -24,11 +26,12 @@
   /* ink */
   --ink:#1d1d1f;
   --ink-80:#333333;
-  --ink-48:#7a7a7a;
+  --ink-48:#6e6e73;
   --on-dark:#ffffff;
   --muted-on-dark:#cccccc;
   /* accent — 단 하나의 인터랙션 색 */
   --accent:#0066cc;
+  --accent-fill:#0066cc;
   --accent-focus:#0071e3;
   --accent-on-dark:#2997ff;
   /* line */
@@ -59,6 +62,7 @@
     --on-dark:#ffffff;
     --muted-on-dark:#cccccc;
     --accent:#2997ff;
+    --accent-fill:#0066cc;
     --accent-focus:#2997ff;
     --accent-on-dark:#2997ff;
     --hairline:#3a3a3c;
@@ -85,6 +89,7 @@
   --on-dark:#ffffff;
   --muted-on-dark:#cccccc;
   --accent:#2997ff;
+  --accent-fill:#0066cc;
   --accent-focus:#2997ff;
   --accent-on-dark:#2997ff;
   --hairline:#3a3a3c;
@@ -100,7 +105,7 @@
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0;background:var(--canvas);color:var(--ink);
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,'Inter','Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Pretendard Variable',Pretendard,system-ui,'Apple SD Gothic Neo','Segoe UI',sans-serif;
   font-size:17px;font-weight:400;line-height:1.47;letter-spacing:-.374px;
   overflow-x:hidden;-webkit-font-smoothing:antialiased;
 }
@@ -118,7 +123,7 @@ button{font-family:inherit}
 .tile--parchment{background:var(--parchment)}
 .tile--dark{
   background:var(--tile-dark);
-  --ink:var(--on-dark); --ink-80:var(--muted-on-dark); --ink-48:#8e8e93;
+  --ink:var(--on-dark); --ink-80:var(--muted-on-dark); --ink-48:#98989d;
   --accent:var(--accent-on-dark); --accent-focus:var(--accent-on-dark);
   --canvas:var(--tile-dark-2); --hairline:rgba(255,255,255,.16);
   --field-line:rgba(255,255,255,.16); --pearl:var(--tile-dark-2);
@@ -141,7 +146,8 @@ button{font-family:inherit}
 .gnav b{font-size:12px;font-weight:600;letter-spacing:-.12px}
 .gnav .n{font-size:12px;font-weight:400;letter-spacing:-.12px;color:#f5f5f7}
 .gnav .sp{margin-left:auto}
-.gnav button{background:none;border:0;color:#f5f5f7;font-size:12px;letter-spacing:-.12px;cursor:pointer;padding:6px 2px;line-height:1}
+.gnav button{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;margin-right:-8px;
+  background:none;border:0;color:#f5f5f7;font-size:12px;letter-spacing:-.12px;cursor:pointer;line-height:1}
 .gnav button:active{transform:scale(.95)}
 
 /* ═══ 서브내비 — frosted parchment 52px ═══════════════════════════ */
@@ -163,7 +169,7 @@ button{font-family:inherit}
 /* ═══ 버튼 문법 ═══════════════════════════════════════════════════ */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;
-  background:var(--accent);color:#fff;border:1px solid transparent;
+  background:var(--accent-fill);color:#fff;border:1px solid transparent;
   font-size:17px;font-weight:400;line-height:1.47;letter-spacing:-.374px;
   border-radius:var(--r-pill);padding:11px 22px;cursor:pointer;white-space:nowrap;
 }
@@ -185,20 +191,20 @@ button{font-family:inherit}
 .chip{
   display:inline-flex;align-items:center;gap:8px;cursor:pointer;
   background:var(--canvas);color:var(--ink);border:1px solid var(--hairline);
-  border-radius:var(--r-pill);padding:11px 16px;
+  border-radius:var(--r-pill);padding:13px 16px;
   font-size:14px;font-weight:400;line-height:1.29;letter-spacing:-.224px;
 }
 .chip:active{transform:scale(.95)}
-.chip[aria-pressed="true"]{border:2px solid var(--accent-focus);padding:10px 15px}
+.chip[aria-pressed="true"]{border:2px solid var(--accent-focus);padding:12px 15px}
 .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--c,var(--ink-48));flex:none}
 .chip .n{color:var(--ink-48);font-variant-numeric:tabular-nums}
 
 .seg{display:inline-flex;gap:4px;background:var(--canvas);border:1px solid var(--hairline);border-radius:var(--r-pill);padding:4px}
 .seg button{
   border:0;background:none;color:var(--ink-48);cursor:pointer;border-radius:var(--r-pill);
-  font-size:14px;line-height:1.29;letter-spacing:-.224px;padding:7px 16px;
+  font-size:14px;line-height:1.29;letter-spacing:-.224px;padding:13px 16px;
 }
-.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.seg button[aria-pressed="true"]{background:var(--accent-fill);color:#fff}
 .seg button:active{transform:scale(.95)}
 
 /* ═══ 카드 — 1px hairline, 18px, 그림자 없음 ══════════════════════ */
@@ -240,6 +246,7 @@ button{font-family:inherit}
 .due-row.is-done{opacity:.45}
 .due-row.is-done .due-t{text-decoration:line-through}
 .due-row.flag{background:var(--flag-bg)}
+.cbx-w{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-11px;cursor:pointer;flex:none}
 .cbx{width:22px;height:22px;accent-color:var(--accent);cursor:pointer;margin:0;flex:none}
 .dday{font-size:14px;font-weight:600;line-height:1.29;letter-spacing:-.224px;color:var(--ink-48);font-variant-numeric:tabular-nums;text-align:center}
 .dday.soon{color:var(--accent)}
@@ -277,7 +284,8 @@ th,td{padding:17px 24px;text-align:left;border-bottom:1px solid var(--divider-so
 th{font-size:12px;font-weight:600;line-height:1;letter-spacing:-.12px;color:var(--ink-48)}
 tbody tr:last-child td{border-bottom:0}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
-.x{background:none;border:0;color:var(--ink-48);cursor:pointer;font-size:17px;line-height:1;padding:4px 8px;border-radius:var(--r-sm)}
+.x{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-11px;
+  background:none;border:0;color:var(--ink-48);cursor:pointer;font-size:19px;line-height:1;border-radius:var(--r-sm)}
 .x:active{transform:scale(.95)}
 .x:hover{color:var(--accent)}
 
@@ -335,6 +343,53 @@ footer .inner{font-size:12px;line-height:1.5;letter-spacing:-.12px}
 footer p{margin:0 0 8px}
 footer .legal{color:var(--ink-48);font-size:10px;line-height:1.3;letter-spacing:-.08px}
 footer code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ═══ 마이크로 인터랙션 ═══════════════════════════════════════════
+   그림자는 쓰지 않는다. 움직임은 표면색·테두리·투명도로만 만든다. */
+html{scroll-behavior:smooth}
+::selection{background:var(--accent);color:#fff}
+
+/* 테마 전환을 부드럽게 (첫 페인트 깜빡임을 피해 booted 이후에만) */
+body.booted,body.booted .tile,body.booted .card,body.booted .act,
+body.booted .day,body.booted .due,body.booted .tw,body.booted .gap{
+  transition:background-color .3s ease,border-color .3s ease,color .3s ease;
+}
+
+/* 타일 진입 — 최초 1회만 */
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+body.booted main > .tile{animation:rise .55s cubic-bezier(.2,.7,.3,1) both}
+body.booted main > .tile:nth-of-type(2){animation-delay:.06s}
+body.booted main > .tile:nth-of-type(3){animation-delay:.12s}
+body.booted main > .tile:nth-of-type(4){animation-delay:.18s}
+body.booted main > .tile:nth-of-type(5){animation-delay:.24s}
+
+/* 누를 수 있는 것 */
+.btn,.chip,.seg button,.x,.gnav button{transition:background-color .2s ease,border-color .2s ease,color .2s ease,transform .1s ease}
+.due-row{transition:background-color .2s ease,opacity .3s ease}
+.due-t,.cbx{transition:color .2s ease,opacity .2s ease}
+.act,.day,.gap,.f input,.f select{transition:border-color .2s ease,background-color .2s ease}
+
+@media (hover:hover) and (pointer:fine){
+  .due-row:not(.flag):hover{background:var(--parchment)}
+  .act:hover,.gap:hover{border-color:var(--ink-48)}
+  .day:not(.today):hover{border-color:var(--ink-48)}
+  .chip:not([aria-pressed="true"]):hover{border-color:var(--ink-48)}
+  .btn:hover{filter:brightness(1.08)}
+  .btn--ghost:hover{filter:none;background:var(--accent-fill);color:#fff}
+  .x:hover{color:var(--accent);background:var(--parchment)}
+  .cbx-w:hover .cbx{opacity:.75}
+}
+
+/* 완료 체크 피드백 — 잠깐 파랗게 훑고 지나간다 */
+@keyframes settle{
+  0%{background-color:color-mix(in srgb,var(--accent) 16%,transparent)}
+  100%{background-color:transparent}
+}
+.due-row.just-done{animation:settle .7s ease-out}
+
+/* 스켈레톤 → 콘텐츠 */
+@keyframes fade{from{opacity:0}to{opacity:1}}
+body.booted #week,body.booted #due,body.booted #acts{animation:fade .4s ease both}
 
 /* ═══ 반응형 ══════════════════════════════════════════════════════ */
 @media (max-width:1068px){
@@ -626,15 +681,16 @@ async function load() {
 
     // 활동 색을 CSS 변수로 주입 (데이터 식별용 — 인터랙션 색은 Action Blue 하나뿐)
     const root = document.documentElement.style;
-    for (const act of S.activities) root.setProperty(`--act-${act.slug}`, act.color || '#7a7a7a');
+    for (const act of S.activities) root.setProperty(`--act-${act.slug}`, act.color || '#6e6e73');
 
     renderAll();
+    requestAnimationFrame(() => document.body.classList.add('booted'));
   } catch (e) {
     console.error(e);
     showError(e);
   }
 }
-const colorOf = (act) => act ? `var(--act-${act.slug}, ${act.color || '#7a7a7a'})` : 'var(--ink-48)';
+const colorOf = (act) => act ? `var(--act-${act.slug}, ${act.color || '#6e6e73'})` : 'var(--ink-48)';
 
 function renderAll() {
   document.getElementById('today-label').textContent = fLong.format(new Date());
@@ -734,7 +790,8 @@ function renderDue() {
     const act = S.byId.get(it.activity_id);
     const n = dday(it.due_at, today);
     return `<li class="due-row${it.conflict ? ' flag' : ''}${it.done ? ' is-done' : ''}" data-id="${it.id}">
-      <input class="cbx" type="checkbox" ${it.done ? 'checked' : ''} aria-label="${esc(it.title)} 완료" data-id="${it.id}">
+      <label class="cbx-w"><input class="cbx" type="checkbox" ${it.done ? 'checked' : ''}
+        aria-label="${esc(it.title)} 완료" data-id="${it.id}"></label>
       <span class="dday${n <= 1 ? ' soon' : ''}">${ddayText(n)}</span>
       <span class="due-m">
         <span class="due-t">${esc(it.title)}</span>
@@ -761,6 +818,12 @@ function paintRow(id) {
   row.classList.toggle('is-done', Boolean(it.done));
   const cb = row.querySelector('.cbx');
   if (cb && cb.checked !== Boolean(it.done)) cb.checked = Boolean(it.done);
+  if (it.done) {
+    row.classList.remove('just-done');
+    void row.offsetWidth;          // 애니메이션 재시작
+    row.classList.add('just-done');
+    setTimeout(() => row.classList.remove('just-done'), 800);
+  }
 }
 
 // 낙관적 업데이트 → 실패하면 되돌린다
