@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT } from './db.mjs';
-import { seoulYMD, seoulHM, seoulDow } from './render.mjs';
+import { seoulHM, seoulDow } from './core/dates.mjs';
 
 let _sched = null;
 

@@ -1,27 +1,8 @@
 // 파싱 프롬프트 템플릿. 오늘 날짜(Asia/Seoul)와 기존 활동 목록을 반드시 주입한다.
-import { seoulYMD, seoulDow } from './render.mjs';
+import { weekContext } from './core/dates.mjs';
 import { scheduleText } from './schedule.mjs';
 
-const DOW = ['일', '월', '화', '수', '목', '금', '토'];
-
-export function addDays(ymd, n) {
-  const [y, m, d] = ymd.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
-}
-
-/** 오늘 기준 이번 주(월~일) / 다음 주 경계 — 상대 날짜 해석용 */
-export function weekContext(now = new Date()) {
-  const today = seoulYMD(now);
-  const dow = seoulDow(now);
-  const idx = DOW.indexOf(dow);            // 일=0 … 토=6
-  const toMon = idx === 0 ? -6 : 1 - idx;  // 월요일까지의 오프셋
-  const mon = addDays(today, toMon);
-  return {
-    today, dow,
-    thisMon: mon, thisSun: addDays(mon, 6),
-    nextMon: addDays(mon, 7), nextSun: addDays(mon, 13),
-  };
-}
+export { addDays, weekContext } from './core/dates.mjs';
 
 const SCHEMA = `{
   "activities": [{ "slug": "...", "name": "...", "org": "...", "status": "진행중",

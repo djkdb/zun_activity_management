@@ -65,43 +65,17 @@ export function table(headers, rows, align = []) {
   return out.join('\n');
 }
 
-// ── 날짜 ──────────────────────────────────────────────────────────────
-const ymdFmt = new Intl.DateTimeFormat('en-CA', {
-  timeZone: SEOUL, year: 'numeric', month: '2-digit', day: '2-digit',
-});
-const hmFmt = new Intl.DateTimeFormat('en-GB', {
-  timeZone: SEOUL, hour: '2-digit', minute: '2-digit', hour12: false,
-});
-const dowFmt = new Intl.DateTimeFormat('ko-KR', { timeZone: SEOUL, weekday: 'short' });
+// ── 날짜 ──────────────────────────────────────────────────────────
+// 실제 구현은 core/dates.mjs 에 있다. 여기서는 표시용으로 다시 내보내기만 한다.
+export { seoulYMD, seoulHM, seoulDow, dday, ddayLabel } from './core/dates.mjs';
+import { seoulYMD as _ymd, seoulHM as _hm, seoulDow as _dow } from './core/dates.mjs';
 
-/** Asia/Seoul 기준 YYYY-MM-DD */
-export const seoulYMD = (d = new Date()) => ymdFmt.format(d instanceof Date ? d : new Date(d));
-/** Asia/Seoul 기준 HH:MM */
-export const seoulHM = (d) => hmFmt.format(d instanceof Date ? d : new Date(d));
-/** Asia/Seoul 기준 요일 (월~일) */
-export const seoulDow = (d) => dowFmt.format(d instanceof Date ? d : new Date(d)).replace(/요일$/, '');
-
-const ymdToUTC = (s) => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); };
-
-/** 오늘(Seoul) 기준 D-day. 오늘=0, 내일=1 */
-export function dday(due, now = new Date()) {
-  if (!due) return null;
-  return Math.round((ymdToUTC(seoulYMD(due)) - ymdToUTC(seoulYMD(now))) / 86400000);
-}
-
-export function ddayLabel(due, now = new Date()) {
-  const d = dday(due, now);
-  if (d === null) return '미정';
-  if (d === 0) return 'D-DAY';
-  return d > 0 ? `D-${d}` : `D+${-d}`;
-}
-
-/** "9/18(금) 10:00" — all_day면 시각 생략 */
+/** "9/18(금) 10:00" — all_day 면 시각 생략 */
 export function fmtDue(due, allDay = false) {
   if (!due) return '미정';
-  const [, m, d] = seoulYMD(due).split('-');
-  const base = `${Number(m)}/${Number(d)}(${seoulDow(due)})`;
-  return allDay ? base : `${base} ${seoulHM(due)}`;
+  const [, m, d] = _ymd(due).split('-');
+  const base = `${Number(m)}/${Number(d)}(${_dow(due)})`;
+  return allDay ? base : `${base} ${_hm(due)}`;
 }
 
 export const ok = (s) => `${A.green}✓${A.reset} ${s}`;

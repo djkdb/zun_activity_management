@@ -8,7 +8,8 @@ import { createInterface } from 'node:readline/promises';
 
 import { db, listActivities, listUpcoming, searchItems, itemsOnDate, ConfigError, loadEnv } from '../src/db.mjs';
 import { buildPrompt } from '../src/prompt.mjs';
-import { parseWithClaude, ClaudeMissingError, ClaudeRunError, JsonExtractError, normalize } from '../src/parse.mjs';
+import { normalize } from '../src/parse.mjs';
+import { parseText, ClaudeMissingError, JsonExtractError } from '../src/providers/ai/index.mjs';
 import {
   A, hex, table, fmtDue, ddayLabel, dday, seoulYMD, seoulDow,
   truncate, ok, warn, err,
@@ -232,8 +233,20 @@ async function cmdAdd(opts) {
   let result;
   while (true) {
     try {
-      result = await parseWithClaude(prompt);
+      // AI 가 실패하면 규칙 기반으로 내려간다 — CLI 전체가 멈추지는 않는다.
+      result = await parseText({
+        prompt, rawText, activitySlug: opts.activity ?? null,
+        allowFallback: !opts.noFallback,
+      });
       process.stdout.write(`\r${' '.repeat(40)}\r`);
+      if (result.degraded) {
+        console.log(warn('AI 파싱에 실패해 규칙 기반으로 읽었습니다.'));
+        console.log(`${A.gray}  ${result.reason}${A.reset}`);
+        if (!result.parsed.items.length) {
+          console.log(warn('규칙 기반으로도 날짜를 찾지 못했습니다. 날짜를 넣어 다시 말해 보세요.'));
+          return 1;
+        }
+      }
       break;
     } catch (e) {
       process.stdout.write(`\r${' '.repeat(40)}\r`);
@@ -403,6 +416,7 @@ function cmdOpen() {
 const HELP = `${A.bold}zun${A.reset} — 서포터즈·대외활동 관리 CLI
 
 ${A.bold}사용법${A.reset}
+  zun "10월 15일까지 공모전 제출"   ${A.gray}← 그냥 말하면 된다 (add 와 같음)${A.reset}
   zun add                       $EDITOR 를 열어 원문 작성 → 파싱
   zun add "9/18 금 10시 OT"      인자로 바로
   cat 공지.txt | zun add          파이프
@@ -418,6 +432,7 @@ ${A.bold}옵션${A.reset}
       --activity <slug> 활동 힌트
   -y, --yes             확인 없이 진행
       --dry-run         파싱·미리보기만 하고 저장하지 않음
+      --no-fallback     AI 실패 시 규칙 기반으로 내려가지 않음
       --all             (ls) 완료된 일정도 표시
   -h, --help            이 도움말
 `;
@@ -431,6 +446,7 @@ function parseArgs(argv) {
     else if (a === '--source') o.source = argv[++i];
     else if (a === '-y' || a === '--yes') o.assumeYes = true;
     else if (a === '--dry-run') o.dryRun = true;
+    else if (a === '--no-fallback') o.noFallback = true;
     else if (a === '--all') o.all = true;
     else if (a === '-h' || a === '--help') o.help = true;
     else o._.push(a);
@@ -458,10 +474,17 @@ async function main() {
     }
     case 'done': return cmdDone(opts._.slice(1).join(' '), opts);
     case 'open': return cmdOpen();
-    default:
-      console.error(err(`알 수 없는 명령: ${cmd}`));
-      console.log(HELP);
-      return 1;
+    default: {
+      // `zun "10월 15일까지 공모전 제출"` — 명령을 몰라도 그냥 말하면 된다.
+      // 명령처럼 생긴 한 단어(영문·하이픈만)는 오타로 보고 도움말을 띄운다.
+      if (/^[a-z][a-z-]*$/.test(cmd) && opts._.length === 1) {
+        console.error(err(`알 수 없는 명령: ${cmd}`));
+        console.log(HELP);
+        return 1;
+      }
+      opts.text = opts._.join(' ');
+      return cmdAdd(opts);
+    }
   }
 }
 

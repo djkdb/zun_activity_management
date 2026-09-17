@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "node --run serve",
     "serve": "node --watch-path=public -e \"import('node:http').then(async ({default:http})=>{const fs=await import('node:fs/promises');const p=await import('node:path');const T={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml'};http.createServer(async(q,s)=>{let f=q.url.split('?')[0];if(f==='/')f='/index.html';try{const b=await fs.readFile(p.join('public',f));s.writeHead(200,{'content-type':T[p.extname(f)]||'application/octet-stream'});s.end(b)}catch{s.writeHead(404).end('not found')}}).listen(5173,()=>console.log('http://localhost:5173'))})\"",
-    "zun": "node bin/zun.mjs"
+    "zun": "node bin/zun.mjs",
+    "test": "node --test 'test/*.test.mjs'"
   },
   "engines": {
     "node": ">=20"
