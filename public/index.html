@@ -72,6 +72,8 @@
 }
 
 *,*::before,*::after{box-sizing:border-box}
+/* display 를 주는 규칙이 [hidden] 을 덮어써서, 숨긴 요소가 탭 순서에 남는 일이 있다. */
+[hidden]{display:none !important}
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0;background:var(--bg);color:var(--ink);
@@ -197,6 +199,28 @@ code,.mono{font-family:var(--mono)}
   transition:background-color .18s ease,color .18s ease;
 }
 .seg button[aria-pressed="true"]{background:var(--accent-btn);color:var(--on-accent);font-weight:700}
+
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;min-width:0}
+.search{
+  min-width:0;width:200px;min-height:44px;padding:0 14px;font:inherit;font-size:14px;
+  color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;
+}
+.search::placeholder{color:var(--ink-2)}
+.search:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
+.tgl{
+  min-height:44px;padding:0 16px;font:inherit;font-size:13px;cursor:pointer;border-radius:999px;
+  color:var(--ink-2);background:var(--panel);border:1px solid var(--line);
+  transition:background-color .18s ease,color .18s ease;
+}
+.tgl[aria-pressed="true"]{background:var(--accent-btn);color:var(--on-accent);
+  border-color:transparent;font-weight:700}
+
+/* 놓친 마감 — 눈에 걸려야 의미가 있다 */
+#s-late .sec-head h2{color:var(--warn)}
+.due.late .d-head{color:var(--warn)}
+.due.late .d-dd{color:var(--warn);font-weight:700}
+.side-nav .n.warn{color:var(--warn)}
+.late-more{padding:12px 0 0;display:flex;justify-content:center}
 
 /* ═══ 빠른 입력 ═══════════════════════════════════════════════════ */
 .cap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:var(--gap)}
@@ -342,7 +366,9 @@ code,.mono{font-family:var(--mono)}
 .tag{display:inline-flex;align-items:center;gap:6px;min-width:0}
 .tag .dot{width:8px;height:8px;border-radius:999px;background:var(--c);flex:none}
 .tag.warn{color:var(--warn)}
-.tag.req{color:var(--ink);font-weight:700}
+.tag.opt{color:var(--ink-2)}
+.tag.dup{color:var(--warn);border-color:var(--warn)}
+.cap-row.is-dup .t{color:var(--ink-2)}
 .due-w{font-size:13px;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums;padding-top:3px}
 .none{padding:var(--gap-lg) var(--gap);text-align:center;font-size:15px;color:var(--ink-2)}
 
@@ -450,8 +476,13 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   font-size:14px;padding:12px 20px;border-radius:999px;
   opacity:0;pointer-events:none;transition:opacity .2s ease;max-width:calc(100vw - 32px);
 }
-.toast.show{opacity:1}
+.toast.show{opacity:1;pointer-events:auto}
 .toast.bad{border-color:var(--bad);color:var(--bad)}
+.toast{display:flex;align-items:center;gap:14px}
+.toast .undo{
+  border:0;background:none;color:var(--accent-ink);font:inherit;font-weight:700;
+  cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px;
+}
 
 footer{border-top:1px solid var(--line);padding:var(--gap-lg) 0;color:var(--ink-2)}
 footer .inner{font-size:13px}
@@ -564,6 +595,7 @@ body.booted main > .sec{animation:appear .5s ease both}
   </div>
 
   <nav class="side-nav" aria-label="섹션">
+    <a href="#s-late" data-sec="s-late" id="lnk-late" hidden><span>놓친 마감</span><b class="n warn" id="n-late"></b></a>
     <a href="#s-capture" data-sec="s-capture"><span>빠른 입력</span></a>
     <a href="#s-week"  data-sec="s-week"><span>이번 주</span><b class="n" id="n-week"></b></a>
     <a href="#s-due"   data-sec="s-due"><span>다가오는 마감</span><b class="n" id="n-due"></b></a>
@@ -601,6 +633,19 @@ body.booted main > .sec{animation:appear .5s ease both}
   <div id="err-wrap" class="sec" hidden>
     <div class="inner"><div class="err" id="err"></div></div>
   </div>
+
+  <!-- 놓친 마감 — 기한이 지났는데 아직 체크되지 않은 것들 -->
+  <section class="sec" id="s-late" hidden>
+    <div class="inner">
+      <div class="sec-head">
+        <div class="row">
+          <h2>놓친 마감</h2>
+          <p class="lead" id="late-hint">—</p>
+        </div>
+      </div>
+      <ul class="due late" id="late"></ul>
+    </div>
+  </section>
 
   <!-- 빠른 입력 -->
   <section class="sec" id="s-capture">
@@ -647,9 +692,15 @@ body.booted main > .sec{animation:appear .5s ease both}
         <div class="row">
           <h2>다가오는 마감</h2>
           <p class="lead" id="due-hint">—</p>
-          <div class="seg" id="range" role="group" aria-label="표시 기간">
-            <button type="button" data-r="30" aria-pressed="true">30일</button>
-            <button type="button" data-r="all" aria-pressed="false">전체</button>
+          <div class="tools">
+            <label class="sr" for="q">일정 검색</label>
+            <input class="search" id="q" type="search" autocomplete="off"
+              placeholder="제목·활동 검색" enterkeyhint="search">
+            <button class="tgl" id="hide-done" type="button" aria-pressed="false">완료 숨기기</button>
+            <div class="seg" id="range" role="group" aria-label="표시 기간">
+              <button type="button" data-r="30" aria-pressed="true">30일</button>
+              <button type="button" data-r="all" aria-pressed="false">전체</button>
+            </div>
           </div>
         </div>
       </div>
@@ -772,14 +823,28 @@ const toUTCday = (s) => { const [y,m,d] = s.split('-').map(Number); return Date.
 const addDays = (s, n) => new Date(toUTCday(s) + n*86400000).toISOString().slice(0,10);
 const dday = (due, base) => due ? Math.round((toUTCday(ymd(due)) - toUTCday(base ?? ymd(new Date()))) / 86400000) : null;
 const ddayText = (n) => n === null ? '미정' : n === 0 ? '오늘' : n > 0 ? `D-${n}` : `D+${-n}`;
-const isAlbaDay = (y) => { const d = dow(new Date(toUTCday(y) + 12*3600000)); return d === '수' || d === '금'; };
+
+/** 시각 비교용. 문자열로 비교하면 '+09:00' 과 '+00:00' 이 섞였을 때 순서가 뒤집힌다. */
+const ts = (v) => { const n = v ? Date.parse(v) : NaN; return Number.isNaN(n) ? Infinity : n; };
+/** 날짜 없는 건 뒤로. 둘 다 없으면 0 — Infinity 끼리 빼면 NaN 이라 정렬이 무너진다. */
+const byDue = (a, b) => { const x = ts(a.due_at), y = ts(b.due_at); return x === y ? 0 : x - y; };
+/** 게시일 최신 순, 날짜 없는 건 맨 뒤. */
+function byPublishedDesc(a, b) {
+  const x = a.published_at ? Date.parse(a.published_at) : null;
+  const y = b.published_at ? Date.parse(b.published_at) : null;
+  if (x === null && y === null) return 0;
+  if (x === null) return 1;
+  if (y === null) return -1;
+  return y - x;
+}
+
 const won = (n) => (n ?? 0).toLocaleString('ko-KR');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const md = (s) => s.slice(5).replace('-', '/');
 
 // ── 상태 ────────────────────────────────────────────────────────
 const S = { activities: [], items: [], outputs: [], byId: new Map(), filter: 'all', range: 30, loaded: false,
-            fixed: [], online: [], semester: null };
+            fixed: [], online: [], semester: null, q: '', hideDone: false, lateOpen: false };
 
 // ── 테마 ────────────────────────────────────────────────────────
 const themeBtns = [document.getElementById('theme'), document.getElementById('theme-side')].filter(Boolean);
@@ -800,13 +865,25 @@ applyTheme();
 
 // ── 토스트 ──────────────────────────────────────────────────────
 let toastT;
-function toast(msg, bad = false) {
+/**
+ * @param {string} msg
+ * @param {boolean} bad
+ * @param {{label:string, run:Function}|null} action 되돌리기처럼 토스트에서 바로 할 일
+ */
+function toast(msg, bad = false, action = null) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
+  el.innerHTML = '';
+  el.append(Object.assign(document.createElement('span'), { textContent: msg }));
+  if (action) {
+    const b = Object.assign(document.createElement('button'),
+      { className: 'undo', type: 'button', textContent: action.label });
+    b.addEventListener('click', () => { el.classList.remove('show'); action.run(); });
+    el.append(b);
+  }
   el.classList.toggle('bad', bad);
   el.classList.add('show');
   clearTimeout(toastT);
-  toastT = setTimeout(() => el.classList.remove('show'), bad ? 5000 : 2600);
+  toastT = setTimeout(() => el.classList.remove('show'), action ? 7000 : bad ? 5000 : 2600);
 }
 
 function skeletons() {
@@ -882,8 +959,10 @@ function renderSide() {
   }).length;
   const gaps = document.querySelectorAll('.gap').length;
 
+
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || ''; };
   set('n-week', week); set('n-due', open); set('n-acts', S.activities.length);
+
   set('n-out', S.outputs.length); set('n-gaps', gaps);
   const lnk = document.getElementById('lnk-gaps');
   if (lnk) lnk.hidden = gaps === 0;
@@ -909,7 +988,7 @@ function initSpy() {
 
 function renderAll() {
   document.getElementById('today-label').textContent = fLong.format(new Date());
-  renderWeek(); renderFilters(); renderDue(); renderActs();
+  renderWeek(); renderFilters(); renderLate(); renderDue(); renderActs();
   renderOutputs(); renderActOptions(); renderGaps(); tickCountdown();
   renderSide(); initSpy();
 }
@@ -936,6 +1015,21 @@ function loadSchedule(sched) {
 }
 
 const fixedOn = (d) => S.fixed.filter((b) => b.day === d).sort((a, b) => toMin(a.start) - toMin(b.start));
+/** 그 날짜의 알바 시간대. 하드코딩하지 않고 schedule.json 에서 읽는다. */
+function albaOn(y) {
+  const blocks = S.fixed.filter((b) => b.kind === '알바' && b.day === dow(y));
+  if (!blocks.length) return null;
+  const lo = Math.min(...blocks.map((b) => toMin(b.start)));
+  const hi = Math.max(...blocks.map((b) => toMin(b.end)));
+  return `알바 ${Math.floor(lo / 60)}–${Math.floor(hi / 60)}시`;
+}
+
+/** 고정 블록의 윗줄. 이름이 곧 종류인 '근로'·'알바' 는 같은 말을 두 번 쓰지 않는다. */
+function kLine(b, wide) {
+  const kind = b.label === b.kind ? '' : b.kind;
+  const when = wide ? `${b.start}–${b.end}` : '';
+  return [when, kind].filter(Boolean).join(' · ');
+}
 /** 끝 시각이 없는 일정이 그리드에서 차지할 길이(분). ics.mjs 의 defaultMinutes 와 같은 기준. */
 const evMinutes = (kind) => (kind === '회의' || kind === '행사' ? 60 : 30);
 /** 23:59 나 종일 항목은 '시각'이 아니라 '그날 마감'이다 → 그리드가 아니라 위 띠에 둔다. */
@@ -975,7 +1069,7 @@ function renderWeek() {
     const pins = itemsOn(d)
       .filter(isDeadline)
       .slice()
-      .sort((a, b) => (a.due_at < b.due_at ? -1 : 1))
+      .sort(byDue)
       .map((it) => {
         const act = S.byId.get(it.activity_id);
         const when = '마감';
@@ -1029,7 +1123,7 @@ function renderWeek() {
         return `<div class="${cls0}${b.alba ? ' blk--alba' : ''}"
           style="--c:${b.color ?? 'var(--ink-48)'};${place}"
           title="${esc(b.label)} ${b.start}–${b.end}${b.sub ? ' · ' + esc(b.sub) : ''}">
-          ${tight && !wide ? '' : `<span class="k">${wide ? `${b.start}–${b.end} · ` : ''}${b.kind}</span>`}
+          ${tight && !wide ? '' : `<span class="k">${kLine(b, wide)}</span>`}
           <span class="t">${esc(b.label)}</span>
           ${b.sub && wide && h > 52 ? `<span class="s">${esc(b.sub)}</span>` : ''}</div>`;
       }
@@ -1058,7 +1152,8 @@ function renderWeek() {
         `<div class="row2${b.alba ? ' alba' : ''}" style="--c:${b.color ?? 'var(--ink-48)'}">
           <span class="w">${b.start}–${b.end}</span>
           <span class="m"><span class="t">${esc(b.label)}</span>
-          <span class="s">${b.kind}${b.sub ? ' · ' + esc(b.sub) : ''}</span></span></div>` })),
+          <span class="s">${[b.label === b.kind ? '' : b.kind, b.sub ? esc(b.sub) : '']
+            .filter(Boolean).join(' · ') || '고정'}</span></span></div>` })),
       ...itemsOn(d).map((it) => {
         const act = S.byId.get(it.activity_id);
         return { sort: isDeadline(it) ? 24 * 60 : toMin(hm(it.due_at)), html:
@@ -1123,6 +1218,25 @@ function renderFilters() {
   }));
 }
 
+let qT = null;
+document.getElementById('q').addEventListener('input', (e) => {
+  // 한 글자마다 다시 그리면 긴 목록에서 입력이 끊긴다
+  clearTimeout(qT);
+  qT = setTimeout(() => {
+    S.q = e.target.value.trim().toLowerCase();
+    renderLate(); renderDue(); renderSide();
+  }, 120);
+});
+document.getElementById('q').addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.target.value = ''; e.target.dispatchEvent(new Event('input')); }
+});
+
+document.getElementById('hide-done').addEventListener('click', (e) => {
+  S.hideDone = !S.hideDone;
+  e.currentTarget.setAttribute('aria-pressed', String(S.hideDone));
+  renderDue(); renderSide();
+});
+
 document.getElementById('range').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-r]');
   if (!b) return;
@@ -1132,14 +1246,48 @@ document.getElementById('range').addEventListener('click', (e) => {
 });
 
 // 현재 필터·기간에 해당하는 일정 (정렬 전)
+/** 저장·수정한 것이 지금 보고 있는 화면에 실제로 떴는지. 말없이 사라지지 않게. */
+const isOnScreen = (id) =>
+  currentDueList().some((x) => x.id === id) || lateList().some((x) => x.id === id);
+
+/** 왜 안 보이는지 한마디로. */
+function whyHidden(n) {
+  if (S.q) return '검색어와 안 맞습니다';
+  if (S.range !== 'all' && n > S.range) return `${S.range}일 밖입니다 — '전체' 를 눌러 보세요`;
+  return '지금 보는 목록 밖입니다';
+}
+
+/** 검색어는 제목·활동명·종류·메모를 함께 본다. */
+function matchQ(it) {
+  if (!S.q) return true;
+  const act = S.byId.get(it.activity_id);
+  return [it.title, it.kind, it.memo, act?.name]
+    .filter(Boolean).join(' ').toLowerCase().includes(S.q);
+}
+const inFilter = (it) => S.filter === 'all' || it.activity_id === S.filter;
+
 function currentDueList() {
   const today = ymd(new Date());
-  let list = S.items.filter((it) => {
+  return S.items.filter((it) => {
+    if (S.hideDone && it.done) return false;
     const n = dday(it.due_at, today);
-    return n !== null && n >= 0 && (S.range === 'all' || n <= S.range);
+    return n !== null && n >= 0 && (S.range === 'all' || n <= S.range) && inFilter(it) && matchQ(it);
   });
-  if (S.filter !== 'all') list = list.filter((it) => it.activity_id === S.filter);
-  return list;
+}
+
+/**
+ * 기한이 지났는데 아직 체크하지 않은 것들.
+ * 예전에는 '다가오는 마감' 이 D-0 이상만 보여 줘서, 놓친 일정이 아무 흔적 없이
+ * 화면에서 사라졌다. 8개를 동시에 굴리는 판에서 제일 위험한 구멍이었다.
+ */
+function lateList() {
+  const today = ymd(new Date());
+  return S.items.filter((it) => {
+    if (it.done || !it.due_at) return false;
+    const n = dday(it.due_at, today);
+    return n !== null && n < 0 && inFilter(it) && matchQ(it);
+  // 최근에 놓친 것이 아직 만회할 수 있는 것이다 — 그쪽을 위로 올린다.
+  }).sort((a, b) => byDue(b, a));
 }
 
 function updateDueHint() {
@@ -1147,7 +1295,8 @@ function updateDueHint() {
   const open = list.filter((it) => !it.done).length;
   const conf = list.filter((i) => i.conflict).length;
   document.getElementById('due-hint').textContent =
-    `${S.range === 'all' ? '전체' : `${S.range}일 내`} · 남은 ${open}건 / ${list.length}건${conf ? ` · 충돌 ${conf}건` : ''}`;
+    `${S.range === 'all' ? '전체' : `${S.range}일 내`} · 남은 ${open}건 / ${list.length}건`
+    + `${conf ? ` · 충돌 ${conf}건` : ''}${S.q ? ` · "${S.q}" 검색 중` : ''}`;
 }
 
 function dateHead(due, today) {
@@ -1157,7 +1306,7 @@ function dateHead(due, today) {
   return `<li class="d-head${n <= 1 ? ' is-soon' : ''}">
     <span class="d-when">${Number(m)}월 ${Number(dd)}일 ${dow(due)}</span>
     <span class="d-dd">${ddayText(n)}</span>
-    ${isAlbaDay(d) ? '<span class="d-alba">알바 17–22시</span>' : ''}
+    ${albaOn(d) ? `<span class="d-alba">${albaOn(d)}</span>` : ''}
   </li>`;
 }
 
@@ -1171,7 +1320,7 @@ function rowHtml(it) {
       <span class="due-s">
         <span class="tag" style="--c:${colorOf(act)}"><i class="dot"></i>${esc(act?.name ?? '-')}</span>
         <span>${esc(it.kind ?? '')}</span>
-        ${it.required ? '<span class="tag req">필수</span>' : ''}
+        ${it.required === false ? '<span class="tag opt">선택</span>' : ''}
         ${it.conflict ? `<span class="tag warn">${esc(it.conflict_why ?? '일정 충돌')}</span>` : ''}
       </span>
     </span>
@@ -1184,11 +1333,15 @@ function rowHtml(it) {
 function renderDue() {
   const today = ymd(new Date());
   const list = currentDueList().slice()
-    .sort((a, b) => (a.done - b.done) || (a.due_at < b.due_at ? -1 : 1));
+    .sort((a, b) => (Number(Boolean(a.done)) - Number(Boolean(b.done))) || byDue(a, b));
   updateDueHint();
 
   const ul = document.getElementById('due');
-  if (!list.length) { ul.innerHTML = '<li class="none">다가오는 마감이 없습니다.</li>'; return; }
+  if (!list.length) {
+    ul.innerHTML = `<li class="none">${S.q ? `"${esc(S.q)}" 와 맞는 일정이 없습니다.`
+      : S.hideDone ? '남은 마감이 없습니다.' : '다가오는 마감이 없습니다.'}</li>`;
+    return;
+  }
 
   // 날짜가 행마다 반복되면 읽기 어렵다. 날짜를 머리글로 올리고 그 아래 일정만 둔다.
   const out = [];
@@ -1203,8 +1356,55 @@ function renderDue() {
   }
   ul.innerHTML = out.join('');
 
-  ul.querySelectorAll('.cbx').forEach((c) => c.addEventListener('change', () => toggleDone(c.dataset.id, c.checked)));
-  ul.querySelectorAll('.edit').forEach((b) => b.addEventListener('click', () => openEditor(b.dataset.id)));
+  wireRows(ul);
+}
+
+/** 체크·수정 버튼 연결. 마감 목록과 놓친 마감이 같이 쓴다. */
+function wireRows(root) {
+  root.querySelectorAll('.cbx').forEach((c) =>
+    c.addEventListener('change', () => toggleDone(c.dataset.id, c.checked)));
+  root.querySelectorAll('.edit').forEach((b) =>
+    b.addEventListener('click', () => openEditor(b.dataset.id)));
+}
+
+const LATE_SHOWN = 5;
+
+function renderLate() {
+  const list = lateList();
+  const sec = document.getElementById('s-late');
+  const lnk = document.getElementById('lnk-late');
+  const n = list.length;
+  sec.hidden = n === 0;
+  if (lnk) lnk.hidden = n === 0;
+  const cnt = document.getElementById('n-late');
+  if (cnt) cnt.textContent = n || '';
+  if (!n) { document.getElementById('late').innerHTML = ''; return; }
+
+  const today = ymd(new Date());
+  document.getElementById('late-hint').textContent =
+    `${n}건 · 가장 최근 ${ddayText(dday(list[0].due_at, today))}`;
+
+  // 스무 건이 넘게 쌓이면 화면을 통째로 밀어낸다. 최근 것만 펼쳐 두고 나머지는 접는다.
+  const show = S.lateOpen ? list : list.slice(0, LATE_SHOWN);
+  const out = [];
+  let group = null;
+  for (const it of show) {
+    const key = ymd(it.due_at);
+    if (key !== group) { group = key; out.push(dateHead(it.due_at, today)); }
+    out.push(rowHtml(it));
+  }
+  if (n > LATE_SHOWN) {
+    out.push(`<li class="late-more"><button class="tgl" type="button" id="late-toggle">${
+      S.lateOpen ? '접기' : `나머지 ${n - LATE_SHOWN}건 더 보기`}</button></li>`);
+  }
+  const ul = document.getElementById('late');
+  ul.innerHTML = out.join('');
+  wireRows(ul);
+  ul.querySelector('#late-toggle')?.addEventListener('click', () => {
+    S.lateOpen = !S.lateOpen;
+    renderLate();
+    document.getElementById('s-late').scrollIntoView({ block: 'nearest' });
+  });
 }
 
 /** 한 건을 그 자리에서 고친다. 목록 전체를 다시 그리지 않는다. */
@@ -1286,9 +1486,10 @@ async function saveEdit(id, li) {
   if (error) { btn.disabled = false; btn.textContent = '저장'; toast(`저장 실패: ${error.message}`, true); return; }
 
   Object.assign(it, patch);
-  S.items.sort((a, b) => ((a.due_at ?? '') < (b.due_at ?? '') ? -1 : 1));
+  S.items.sort(byDue);
   closeEditor(); renderAll();
-  toast('수정했습니다');
+  toast(isOnScreen(id) ? '수정했습니다'
+    : `수정했습니다 · ${whyHidden(dday(due, ymd(new Date())))}`);
 }
 
 /** 지우는 건 되돌릴 수 없다 — 두 번 눌러야 지운다. */
@@ -1313,9 +1514,19 @@ async function doDelete(id, btn) {
     toast(`삭제 실패: ${error.message}`, true); return;
   }
   const i = S.items.findIndex((x) => x.id === id);
-  if (i >= 0) S.items.splice(i, 1);
+  const removed = i >= 0 ? S.items.splice(i, 1)[0] : null;
   closeEditor(); renderAll();
-  toast('삭제했습니다');
+  // 지운 행을 그대로 들고 있다가 같은 id 로 되돌린다 — 캘린더 UID 도 유지된다.
+  toast('삭제했습니다', false, removed ? { label: '되돌리기', run: () => undelete(removed) } : null);
+}
+
+async function undelete(row) {
+  const { error } = await sb.from('sp_item').insert(row);
+  if (error) { toast(`되돌리지 못했습니다: ${error.message}`, true); return; }
+  S.items.push(row);
+  S.items.sort(byDue);
+  renderAll();
+  toast('되돌렸습니다');
 }
 
 /** 체크한 행만 제자리에서 갱신한다. 리스트 전체를 다시 그리면 완료 항목이
@@ -1342,13 +1553,13 @@ async function toggleDone(id, next) {
   const prev = { done: it.done, done_at: it.done_at };
   it.done = next;
   it.done_at = next ? new Date().toISOString() : null;
-  paintRow(id); updateDueHint(); renderWeek(); renderActs(); renderFilters(); tickCountdown(); renderSide();
+  paintRow(id); updateDueHint(); renderWeek(); renderActs(); renderFilters(); tickCountdown(); renderSide(); renderLate();
 
   const { error } = await sb.from('sp_item')
     .update({ done: it.done, done_at: it.done_at }).eq('id', id);
   if (error) {
     Object.assign(it, prev);
-    paintRow(id); updateDueHint(); renderWeek(); renderActs(); renderFilters(); tickCountdown(); renderSide();
+    paintRow(id); updateDueHint(); renderWeek(); renderActs(); renderFilters(); tickCountdown(); renderSide(); renderLate();
     toast(`저장 실패: ${error.message}`, true);
   } else {
     toast(next ? '완료 처리했습니다' : '완료를 해제했습니다');
@@ -1421,11 +1632,14 @@ function renderOutputs() {
   const sums = new Map();
   for (const o of S.outputs) if (o.payout) sums.set(o.activity_id, (sums.get(o.activity_id) ?? 0) + o.payout);
   const total = [...sums.values()].reduce((s, n) => s + n, 0);
+  const views = S.outputs.reduce((s, o) => s + (o.views ?? 0), 0);
   document.getElementById('payouts').innerHTML = !total ? '' :
     [...sums.entries()].sort((x, y) => y[1] - x[1]).map(([id, v]) => {
       const a = S.byId.get(id);
       return `<span class="sum" style="--c:${colorOf(a)}"><i class="dot"></i>${esc(a?.name ?? '-')} <b>${won(v)}원</b></span>`;
-    }).join('') + `<span class="sum all">합계 <b>${won(total)}원</b></span>`;
+    }).join('')
+    + `<span class="sum all">합계 <b>${won(total)}원</b></span>`
+    + (views ? `<span class="sum all">조회수 <b>${won(views)}</b></span>` : '');
 }
 
 document.getElementById('out-form').addEventListener('submit', async (e) => {
@@ -1465,7 +1679,19 @@ async function delOutput(id) {
     renderOutputs(); renderActs();
     toast(`삭제 실패: ${error.message}`, true);
     renderSide();
-  } else { renderSide(); toast('삭제했습니다'); }
+  } else {
+    renderSide();
+    toast('삭제했습니다', false, { label: '되돌리기', run: () => undelOutput(removed) });
+  }
+}
+
+async function undelOutput(row) {
+  const { error } = await sb.from('sp_output').insert(row);
+  if (error) { toast(`되돌리지 못했습니다: ${error.message}`, true); return; }
+  S.outputs.push(row);
+  S.outputs.sort(byPublishedDesc);
+  renderOutputs(); renderActs(); renderSide();
+  toast('되돌렸습니다');
 }
 
 // ── 5. 비어있는 정보 ────────────────────────────────────────────
@@ -1497,6 +1723,9 @@ let capParsed = [];
 let capNotes = [];
 const actOf = (slug) => S.activities.find((a) => a.slug === slug) ?? null;
 
+/** 같은 일정인지 보는 열쇠 — 같은 날, 공백을 지운 같은 제목. */
+const dupKey = (it) => `${ymd(it.due_at)}|${String(it.title ?? '').replace(/\s+/g, '')}`;
+
 /** 고정 일정과 겹치는지 — 대시보드가 이미 들고 있는 S.fixed 를 쓴다. */
 function conflictOf(dueISO, allDay) {
   if (!dueISO || allDay) return null;
@@ -1518,7 +1747,7 @@ function renderCapture() {
   if (!capParsed.length) { box.innerHTML = ''; return; }
   const rows = capParsed.map((it, n) => {
     const why = it.conflict_why;
-    return `<li class="cap-row${why ? ' flag' : ''}">
+    return `<li class="cap-row${why ? ' flag' : ''}${it._dup ? ' is-dup' : ''}">
       <label class="cbx-w"><input class="cbx" type="checkbox" data-n="${n}"
         ${it._on ? 'checked' : ''} aria-label="${esc(it.title)} 저장"></label>
       <span>
@@ -1526,6 +1755,8 @@ function renderCapture() {
         <span class="s">
           ${it.activity_slug ? `<span class="tag" style="--c:${colorOf(actOf(it.activity_slug))}"><i class="dot"></i>${esc(actOf(it.activity_slug)?.name ?? it.activity_slug)}</span>` : ''}
           <span>${esc(it.kind)}</span>
+          ${it._dup ? '<span class="tag dup">이미 있음</span>' : ''}
+          ${it.required ? '<span class="tag">필수</span>' : ''}
           ${why ? `<span class="warn">⚠ ${esc(why)}</span>` : ''}</span>
       </span>
       <span class="w">${esc(md(ymd(it.due_at)))} ${it.all_day ? '종일' : esc(hm(it.due_at))}${
@@ -1560,9 +1791,16 @@ function readCapture() {
   const r = fallbackParse(text, { activitySlug: slug, activities: S.activities });
 
   capNotes = r.notes ?? [];
-  capParsed = r.items.map((it) => ({
-    ...it, _on: true, conflict_why: it.conflict_why ?? conflictOf(it.due_at, it.all_day),
-  }));
+  // 같은 공지를 두 번 붙여넣는 일이 잦다. 이미 있는 건 꺼 둔 채로 보여 준다.
+  const seen = new Set(S.items.map(dupKey));
+  capParsed = r.items.map((it) => {
+    const dup = seen.has(dupKey(it));
+    seen.add(dupKey(it));                       // 이번 입력 안의 중복도 잡는다
+    return { ...it, _on: !dup, _dup: dup,
+      conflict_why: it.conflict_why ?? conflictOf(it.due_at, it.all_day) };
+  });
+  const dups = capParsed.filter((i) => i._dup).length;
+  if (dups) capNotes.push(`${dups}건은 이미 있는 일정이라 체크를 꺼 뒀습니다.`);
 
   if (!capParsed.length) {
     box.innerHTML = `<p class="cap-hint bad">날짜를 찾지 못했습니다.</p>
@@ -1602,11 +1840,12 @@ async function saveCapture() {
   }).then(({ error: e }) => { if (e) console.warn('sp_ingest:', e.message); });
 
   S.items.push(...(data ?? []));
-  S.items.sort((a, b) => (a.due_at ?? '') < (b.due_at ?? '') ? -1 : 1);
+  S.items.sort(byDue);
   capParsed = [];
   document.getElementById('cap-text').value = '';
   renderCapture(); renderAll();
-  toast(`${data.length}건 저장했습니다`);
+  const hidden = (data ?? []).filter((r) => !isOnScreen(r.id)).length;
+  toast(`${data.length}건 저장했습니다${hidden ? ` · ${hidden}건은 지금 보는 기간 밖입니다` : ''}`);
 }
 
 document.getElementById('cap-read').addEventListener('click', readCapture);

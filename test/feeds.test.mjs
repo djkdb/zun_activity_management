@@ -19,7 +19,7 @@ const SCHEDULE = {
   classes: [{ name: '데이터베이스시스템', prof: '강윤석', room: 'S4-1-106', color: '#F5A524',
     slots: [{ day: '화', start: '13:00', end: '15:00' }] }],
   work: [{ label: '근로', color: '#30A46C', slots: [{ day: '화', start: '10:00', end: '12:00' }] }],
-  parttime: [{ label: '배달전문점 알바', slots: [{ day: '금', start: '17:00', end: '21:00' }] }],
+  parttime: [{ label: '알바', slots: [{ day: '금', start: '17:00', end: '21:00' }] }],
 };
 
 /** Supabase REST 와 정적 자산을 가로채 실제 경로 그대로 돌린다. */
@@ -64,7 +64,7 @@ test('?only=class — 수업만. 근로·알바·서포터즈는 빠진다', asy
 
 test('?only=work — 근로와 알바만', async () => {
   const { body } = await get('?only=work');
-  assert.deepEqual(summaries(body).sort(), ['💼 근로', '🛵 배달전문점 알바']);
+  assert.deepEqual(summaries(body).sort(), ['💼 근로', '🛵 알바']);
   assert.match(body, /X-APPLE-CALENDAR-COLOR:#30A46C/);
 });
 

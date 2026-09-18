@@ -102,9 +102,34 @@ export function parseRecurrence(text) {
 
 export const looksLikeDeadline = (t) => /까지|마감|데드라인|제출|신청|접수/.test(t);
 
+/**
+ * 종류. 알림이 여기서 갈린다 — 마감·제출은 D-7/D-3/D-1, 회의·행사는 1시간 전.
+ * 위에서부터 먼저 걸리는 것을 쓰므로 순서가 곧 우선순위다.
+ */
+const KIND_RULES = [
+  [/오리엔테이션|\bOT\b|발대식|수료식|시상식|간담회|\bMT\b|워크숍|워크샵|행사|축제|박람회|데모데이/i, '행사'],
+  [/회의|미팅|모임|줌|zoom|세미나|특강|강연|코칭|멘토링|스터디|교육|면접|상담/i, '회의'],
+  [/업로드|게시|포스팅|인증샷|인증|올리기|올려|송출|발행/i, '업로드'],
+  [/제출|과제|서류|보고서|리포트|시안|원고/i, '제출'],
+  [/공지|안내|확인|공유|필독|오픈|발표/i, '안내'],
+  [/마감|데드라인|까지|신청|접수|모집|응모/i, '마감'],
+];
+
+/** 종류를 못 고르면 시각이 있을 때 회의, 없으면 마감으로 둔다. */
+export function guessKind(text, hasTime = false) {
+  for (const [re, kind] of KIND_RULES) if (re.test(text)) return kind;
+  return hasTime ? '회의' : '마감';
+}
+
+/** '필수' 라고 적혀 있을 때만 필수다. 전부 필수면 배지가 아무 말도 못 한다. */
+export const looksRequired = (t) => /필수|반드시|의무|꼭\s|무조건/.test(t);
+
 // ── 제목 정리 ─────────────────────────────────────────────────────
 function cleanTitle(s) {
   return s
+    .replace(/^\s*[-*•·>]+\s*/, '')                                     // 목록 기호
+    .replace(/[[【(（]\s*(공지|필독|안내|중요|재공지|리마인드|긴급)\s*[\]】)）]/g, ' ')  // '[공지]'
+    .replace(new RegExp(`[(（]\\s*(?:${DOW_RE})\\s*[)）]`, 'g'), ' ')      // '10/2(금)' 의 '(금)'
     .replace(new RegExp(`매\\s*주\\s*(?:${DOW_RE})\\s*요?일?`, 'g'), ' ')   // '매주 화요일' 통째로
     .replace(DATE_RE, ' ')
     .replace(/(오전|오후|아침|저녁|밤|새벽)?\s*\d{1,2}\s*시(\s*\d{1,2}\s*분)?/g, ' ')
@@ -113,6 +138,10 @@ function cleanTitle(s) {
     .replace(/매\s*주/g, ' ')
     .replace(/까지|부터/g, ' ')
     .replace(/(?:^|\s)(에|에는|은|는|이|가|을|를)(?=\s|$)/g, ' ')
+    .replace(/\s*(?:해\s*)?(?:주시기|드리기|하시기)?\s*바랍니다\s*$/, '')
+    .replace(/\s*(?:해\s*)?주세요\s*$/, '')
+    .replace(/\s*(진행|참여|참석|실시|운영)?\s*(?:합니다|하세요|예정입니다|예정)\s*$/, '')
+    .replace(/\s*(필수|의무|반드시)\s*$/, '')          // 배지로 따로 보여주므로 제목에서 뺀다
     .replace(/\s*(해야\s*함|해야\s*됨|해야지|하기|있음|있다|임|함)\s*$/, '')
     .replace(/\s*(하고|이고|고)\s*$/, '')      // '정리하고' → '정리'
     .replace(/\s*(해야|하고|해서)\s*$/, '')
@@ -180,7 +209,8 @@ export function fallbackParse(rawText, { activitySlug = null, now = new Date(), 
       const dates = seg.dates.map((d) => parseDate(d, now)).filter(Boolean);
       const title = cleanTitle(chunk) || chunk.slice(0, 40);
       const slug = activitySlug ?? matchActivity(chunk, activities);
-      const kind = looksLikeDeadline(chunk) ? '마감' : (hm || rec) ? '회의' : '마감';
+      const kind = guessKind(chunk, Boolean(hm || rec));
+      const required = looksRequired(chunk);
 
       // 매주 반복 — 끝이 없으면 weeks 주까지만 펼친다. 미리보기에서 빼면 된다.
       if (rec && !dates.length) {
@@ -188,7 +218,7 @@ export function fallbackParse(rawText, { activitySlug = null, now = new Date(), 
         let d = addDays(mondayOf(seoulYMD(now)), i === 0 ? 6 : i - 1);
         if (d < seoulYMD(now)) d = addDays(d, 7);
         for (let n = 0; n < weeks; n++, d = addDays(d, 7)) {
-          items.push(mk({ slug, title, kind, ymd: d, hm, end: tr?.[1] ?? null }));
+          items.push(mk({ slug, title, kind, required, ymd: d, hm, end: tr?.[1] ?? null }));
         }
         notes.push(`"${title}" 은 매주 ${rec}요일 반복이라 ${weeks}주까지만 만들었습니다.`);
         continue;
@@ -203,7 +233,7 @@ export function fallbackParse(rawText, { activitySlug = null, now = new Date(), 
       if (dates.length > 1) {
         const [a, b] = [dates[0], dates[dates.length - 1]];
         items.push({
-          ...mk({ slug, title, kind, ymd: a, hm: hm ?? '00:00', end: null }),
+          ...mk({ slug, title, kind, required, ymd: a, hm: hm ?? '00:00', end: null }),
           due_at: kstISO(a, hm ?? '00:00'),
           due_end: kstISO(b, tr?.[1] ?? '23:59'),
           all_day: !hm,
@@ -211,19 +241,19 @@ export function fallbackParse(rawText, { activitySlug = null, now = new Date(), 
         continue;
       }
 
-      items.push(mk({ slug, title, kind, ymd: dates[0], hm, end: tr?.[1] ?? null }));
+      items.push(mk({ slug, title, kind, required, ymd: dates[0], hm, end: tr?.[1] ?? null }));
     }
   }
 
   notes.unshift('규칙 기반으로 읽었습니다. 날짜·제목을 꼭 확인하세요.');
   return { activities: [], items, notes };
 
-  function mk({ slug, title, kind, ymd, hm, end }) {
+  function mk({ slug, title, kind, required, ymd, hm, end }) {
     return {
       activity_slug: slug, title, kind,
       due_at: kstISO(ymd, hm ?? '23:59'),
       due_end: end ? kstISO(ymd, end) : null,
-      all_day: false, stage: '기획', required: true, memo: null, conflict_why: null,
+      all_day: false, stage: '기획', required: Boolean(required), memo: null, conflict_why: null,
     };
   }
 }

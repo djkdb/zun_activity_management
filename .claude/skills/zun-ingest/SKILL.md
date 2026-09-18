@@ -48,7 +48,7 @@ node -e "import('./src/prompt.mjs').then(m=>console.log(JSON.stringify(m.weekCon
 4. 기간형 일정은 `all_day: true` + `due_at`(시작) + `due_end`(종료).
 5. 주차별 반복 일정표("W1 9/14–9/20, W2 9/21–9/27 …")는 **각 주차를 개별 item 으로 전개**한다.
 6. 원문에 없는 날짜·조건을 지어내지 않는다. 불확실하면 `due_at: null` + `notes` 에 기록.
-7. **고정 주간 일정**(수업 / 근로 / 배달전문점 알바)과 겹치면 `conflict_why` 에 한 줄로 적는다.
+7. **고정 주간 일정**(수업 / 근로 / 알바)과 겹치면 `conflict_why` 에 한 줄로 적는다.
    고정 일정은 `public/schedule.json` 이 원본이고, 아래 명령으로 확인한다:
    ```bash
    node -e "import('./src/schedule.mjs').then(m=>console.log(m.scheduleText()))"
